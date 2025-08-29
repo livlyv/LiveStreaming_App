@@ -1,18 +1,6 @@
 import { Hono } from "hono";
 
-const meta = new Hono();
-
-meta.get("/health", (c) => c.json({ status: "ok" }));
-meta.get("/config", (c) => {
-  const cfg = {
-    streaming: { provider: process.env.STREAMING_PROVIDER ?? "mock" },
-    payments: { provider: process.env.PAYMENTS_PROVIDER ?? "mock" },
-    notifications: { provider: process.env.NOTIFICATIONS_PROVIDER ?? "mock" },
-  };
-  return c.json(cfg);
-});
-
-meta.get("/openapi.json", (c) => {
+export function buildOpenAPI() {
   const openapi = {
     openapi: "3.0.3",
     info: {
@@ -55,27 +43,107 @@ meta.get("/openapi.json", (c) => {
       "/kyc/submit": { post: { summary: "Submit KYC", responses: { "200": { description: "OK" } } } }
     }
   } as const;
-  return c.json(openapi);
-});
+  return openapi;
+}
 
-meta.get("/postman.json", (c) => {
+export function buildPostmanCollection() {
   const base = "/api";
   const collection = {
     info: { name: "Demo Streaming App", schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" },
     item: [
-      { name: "Health", request: { method: "GET", url: `${base}/meta/health` } },
-      { name: "Auth - Request OTP", request: { method: "POST", url: `${base}/auth/otp/request`, body: { mode: "raw", raw: JSON.stringify({ phone: "+911234567890" }) } } },
-      { name: "Auth - Verify OTP", request: { method: "POST", url: `${base}/auth/otp/verify`, body: { mode: "raw", raw: JSON.stringify({ phone: "+911234567890", code: "123456" }) } } },
-      { name: "Wallet", request: { method: "GET", url: `${base}/payments/wallet` } },
-      { name: "Purchase Coins", request: { method: "POST", url: `${base}/payments/purchase`, body: { mode: "raw", raw: JSON.stringify({ coins: 100, amount: 59 }) } } },
-      { name: "Send Gift", request: { method: "POST", url: `${base}/payments/gift`, body: { mode: "raw", raw: JSON.stringify({ coins: 10, to: "u_1", gift: "rose" }) } } },
-      { name: "Viewers", request: { method: "GET", url: `${base}/streaming/viewers/s_demo` } },
-      { name: "Notifications - List", request: { method: "GET", url: `${base}/notifications` } },
-      { name: "Notifications - Read All", request: { method: "POST", url: `${base}/notifications/read-all` } },
-      { name: "Notifications - Clear", request: { method: "DELETE", url: `${base}/notifications/clear` } }
+      {
+        name: "Meta",
+        item: [
+          { name: "Health", request: { method: "GET", url: `${base}/meta/health` } },
+          { name: "Config", request: { method: "GET", url: `${base}/meta/config` } }
+        ]
+      },
+      {
+        name: "Auth",
+        item: [
+          { name: "Request OTP", request: { method: "POST", url: `${base}/auth/otp/request`, body: { mode: "raw", raw: JSON.stringify({ phone: "+911234567890" }) } } },
+          { name: "Verify OTP", request: { method: "POST", url: `${base}/auth/otp/verify`, body: { mode: "raw", raw: JSON.stringify({ phone: "+911234567890", code: "123456" }) } } },
+          { name: "Refresh", request: { method: "POST", url: `${base}/auth/refresh` } },
+          { name: "Logout", request: { method: "POST", url: `${base}/auth/logout` } }
+        ]
+      },
+      {
+        name: "Users",
+        item: [
+          { name: "List", request: { method: "GET", url: `${base}/users` } },
+          { name: "Get", request: { method: "GET", url: `${base}/users/u_1` } },
+          { name: "Create", request: { method: "POST", url: `${base}/users`, body: { mode: "raw", raw: JSON.stringify({ username: "new_user" }) } } },
+          { name: "Update", request: { method: "PATCH", url: `${base}/users/u_1`, body: { mode: "raw", raw: JSON.stringify({ bio: "Updated bio" }) } } }
+        ]
+      },
+      {
+        name: "Streaming",
+        item: [
+          { name: "Start", request: { method: "POST", url: `${base}/streaming/start`, body: { mode: "raw", raw: JSON.stringify({ title: "Test Stream" }) } } },
+          { name: "End", request: { method: "POST", url: `${base}/streaming/end`, body: { mode: "raw", raw: JSON.stringify({ streamId: "s_demo" }) } } },
+          { name: "Viewers", request: { method: "GET", url: `${base}/streaming/viewers/s_demo` } }
+        ]
+      },
+      {
+        name: "Media",
+        item: [
+          { name: "NSFW Check", request: { method: "POST", url: `${base}/media/nsfw/check`, body: { mode: "raw", raw: JSON.stringify({ sample: "base64" }) } } }
+        ]
+      },
+      {
+        name: "Notifications",
+        item: [
+          { name: "List", request: { method: "GET", url: `${base}/notifications` } },
+          { name: "Create", request: { method: "POST", url: `${base}/notifications`, body: { mode: "raw", raw: JSON.stringify({ title: "Hello", body: "World" }) } } },
+          { name: "Read All", request: { method: "POST", url: `${base}/notifications/read-all` } },
+          { name: "Clear", request: { method: "DELETE", url: `${base}/notifications/clear` } }
+        ]
+      },
+      {
+        name: "Payments",
+        item: [
+          { name: "Wallet", request: { method: "GET", url: `${base}/payments/wallet` } },
+          { name: "Purchase", request: { method: "POST", url: `${base}/payments/purchase`, body: { mode: "raw", raw: JSON.stringify({ coins: 100, amount: 59 }) } } },
+          { name: "Gift", request: { method: "POST", url: `${base}/payments/gift`, body: { mode: "raw", raw: JSON.stringify({ coins: 10, to: "u_1", gift: "rose" }) } } },
+          { name: "Earnings", request: { method: "GET", url: `${base}/payments/earnings` } }
+        ]
+      },
+      {
+        name: "Analytics",
+        item: [
+          { name: "Stream Points", request: { method: "GET", url: `${base}/analytics/streams/s_demo` } }
+        ]
+      },
+      {
+        name: "KYC",
+        item: [
+          { name: "Status", request: { method: "GET", url: `${base}/kyc/status` } },
+          { name: "Submit", request: { method: "POST", url: `${base}/kyc/submit` } }
+        ]
+      }
     ]
   } as const;
-  return c.json(collection);
+  return collection;
+}
+
+const meta = new Hono();
+
+meta.get("/health", (c) => c.json({ status: "ok" }));
+meta.get("/config", (c) => {
+  const cfg = {
+    streaming: { provider: process.env.STREAMING_PROVIDER ?? "mock" },
+    payments: { provider: process.env.PAYMENTS_PROVIDER ?? "mock" },
+    notifications: { provider: process.env.NOTIFICATIONS_PROVIDER ?? "mock" },
+  };
+  return c.json(cfg);
+});
+
+meta.get("/openapi.json", (c) => {
+  return c.json(buildOpenAPI());
+});
+
+meta.get("/postman.json", (c) => {
+  return c.json(buildPostmanCollection());
 });
 
 export default meta;
