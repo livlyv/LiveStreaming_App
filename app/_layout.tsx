@@ -7,6 +7,7 @@ import { AuthProvider } from "@/providers/AuthProvider";
 import { StreamProvider } from "@/providers/StreamProvider";
 import { WalletProvider } from "@/providers/WalletProvider";
 import { NotificationProvider } from "@/providers/NotificationProvider";
+import { trpc, trpcClient } from "@/lib/trpc";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -43,18 +44,20 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <AuthProvider>
-          <StreamProvider>
-            <WalletProvider>
-              <NotificationProvider>
-                <RootLayoutNav />
-              </NotificationProvider>
-            </WalletProvider>
-          </StreamProvider>
-        </AuthProvider>
-      </GestureHandlerRootView>
-    </QueryClientProvider>
+    <trpc.Provider client={trpcClient} queryClient={queryClient}>
+      <QueryClientProvider client={queryClient}>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <AuthProvider>
+            <StreamProvider>
+              <WalletProvider>
+                <NotificationProvider>
+                  <RootLayoutNav />
+                </NotificationProvider>
+              </WalletProvider>
+            </StreamProvider>
+          </AuthProvider>
+        </GestureHandlerRootView>
+      </QueryClientProvider>
+    </trpc.Provider>
   );
 }
