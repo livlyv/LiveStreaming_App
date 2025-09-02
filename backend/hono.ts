@@ -15,7 +15,12 @@ import kyc from "./routes/kyc";
 
 const app = new Hono();
 
-app.use("*", cors());
+app.use("*", cors({
+  origin: ['http://localhost:3000', 'https://dev-bo44fwxvov01657rf6ttq.rorktest.dev', 'http://localhost:8081'],
+  credentials: true,
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
 
 app.route("/auth", auth);
 app.route("/meta", meta);
@@ -80,6 +85,20 @@ app.get("/test", (c) => {
     message: "Test endpoint working",
     timestamp: new Date().toISOString(),
     headers: Object.fromEntries(c.req.raw.headers.entries())
+  });
+});
+
+// Health check endpoint
+app.get("/health", (c) => {
+  return c.json({ 
+    status: "healthy",
+    timestamp: new Date().toISOString(),
+    supabase: {
+      url: process.env.SUPABASE_URL ? 'configured' : 'missing',
+      anon_key: process.env.SUPABASE_ANON_KEY ? 'configured' : 'missing',
+      service_key: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'configured' : 'missing'
+    },
+    jwt_secret: process.env.JWT_SECRET ? 'configured' : 'missing'
   });
 });
 

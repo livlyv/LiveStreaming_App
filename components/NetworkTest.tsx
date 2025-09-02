@@ -18,12 +18,17 @@ export default function NetworkTest() {
       const rootData = await rootResponse.json();
       console.log('✅ Root test:', rootData);
 
-      // Test 2: Test endpoint
+      // Test 2: Health check endpoint
+      const healthResponse = await fetch(`${baseUrl}/api/health`);
+      const healthData = await healthResponse.json();
+      console.log('✅ Health check:', healthData);
+
+      // Test 3: Test endpoint
       const testResponse = await fetch(`${baseUrl}/api/test`);
       const testData = await testResponse.json();
       console.log('✅ Test endpoint:', testData);
 
-      // Test 3: Auth signup endpoint (just check if it's reachable)
+      // Test 4: Auth signup endpoint (just check if it's reachable)
       const authResponse = await fetch(`${baseUrl}/api/auth/signup`, {
         method: 'POST',
         headers: {
@@ -34,7 +39,7 @@ export default function NetworkTest() {
       const authData = await authResponse.json();
       console.log('✅ Auth endpoint reachable:', authData);
 
-      setTestResult(`✅ All tests passed!\nRoot: ${rootData.status}\nTest: ${testData.message}\nAuth: ${authData.error || 'reachable'}`);
+      setTestResult(`✅ All tests passed!\nRoot: ${rootData.status}\nHealth: ${healthData.status}\nSupabase: ${healthData.supabase?.url}\nAuth: ${authData.error || 'reachable'}`);
     } catch (error) {
       console.error('❌ Network test failed:', error);
       setTestResult(`❌ Test failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
