@@ -34,7 +34,7 @@ router.post("/:id/profile-picture", async (c) => {
   const id = c.req.param("id");
   const { url } = (await c.req.json().catch(() => ({}))) as { url?: string };
   if (!url) return c.json({ error: "url required" }, 400);
-  const { error } = await supabaseAdmin.from("users").update({ profile_pic: url }).eq("id", id);
+  const { error } = await supabaseAdmin.from("users").update({ profile_pic: url, profile_picture_url: url }).eq("id", id);
   if (error) return c.json({ error: error.message }, 500);
   return c.json({ success: true, url });
 });
@@ -47,6 +47,11 @@ router.post("/presign-upload", async (c) => {
 
     if (!R2_BUCKET || !R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) {
       return c.json({ error: "R2 is not configured on the server" }, 500);
+    }
+
+    const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    if (!allowed.includes(contentType)) {
+      return c.json({ error: "unsupported_content_type", allowed }, 400);
     }
 
     const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
@@ -170,7 +175,29 @@ router.post(":id/message/initiate", async (c) => {
   if (total < 99) {
     return c.json({ ok: false, allowed: false, reason: "threshold_not_met", required: 99, total }, 403);
   }
-  const threadId = [fromUserId, toUserId].sort().join(":");
+
+  const a = [fromUserId, toUserId].sort();
+  const user_a = a[0];
+  const user_b = a[1];
+
+  const { data: threadExisting } = await supabaseAdmin
+    .from("direct_message_threads")
+    .select("id")
+    .eq("user_a", user_a)
+    .eq("user_b", user_b)
+    .maybeSingle();
+
+  let threadId: string | null = threadExisting?.id ?? null;
+  if (!threadId) {
+    const { data: created, error: thrErr } = await supabaseAdmin
+      .from("direct_message_threads")
+      .insert({ user_a, user_b })
+      .select("id")
+      .single();
+    if (thrErr) return c.json({ error: thrErr.message }, 500);
+    threadId = created?.id ?? null;
+  }
+
   return c.json({ ok: true, allowed: true, threadId });
 });
 

@@ -11,6 +11,7 @@ CREATE TABLE users (
     username VARCHAR(50) UNIQUE NOT NULL,
     bio TEXT,
     profile_pic TEXT,
+    profile_picture_url TEXT,
     followers INTEGER DEFAULT 0,
     following INTEGER DEFAULT 0,
     total_likes INTEGER DEFAULT 0,
@@ -130,6 +131,25 @@ CREATE TABLE notifications (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Direct messages threads
+CREATE TABLE direct_message_threads (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_a UUID REFERENCES users(id) ON DELETE CASCADE,
+    user_b UUID REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE (user_a, user_b)
+);
+
+-- Direct messages
+CREATE TABLE direct_messages (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    thread_id UUID REFERENCES direct_message_threads(id) ON DELETE CASCADE,
+    sender_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    receiver_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    message TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Reports table (for content moderation)
 CREATE TABLE reports (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -168,6 +188,8 @@ ALTER TABLE stream_gifts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_coins ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE direct_message_threads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE direct_messages ENABLE ROW LEVEL SECURITY;
 
 -- Basic RLS policies (you can customize these based on your needs)
 CREATE POLICY "Users can view all profiles" ON users FOR SELECT USING (true);
@@ -191,6 +213,21 @@ $$ language 'plpgsql';
 -- Triggers for updating timestamps
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_streams_updated_at BEFORE UPDATE ON streams FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- RLS for direct messages
+CREATE POLICY "Users can view own threads" ON direct_message_threads FOR SELECT USING (
+  auth.uid() = user_a OR auth.uid() = user_b
+);
+CREATE POLICY "Users can insert threads where they are a participant" ON direct_message_threads FOR INSERT WITH CHECK (
+  auth.uid() = user_a OR auth.uid() = user_b
+);
+
+CREATE POLICY "Users can view messages in own threads" ON direct_messages FOR SELECT USING (
+  auth.uid() = sender_id OR auth.uid() = receiver_id
+);
+CREATE POLICY "Users can insert messages they send" ON direct_messages FOR INSERT WITH CHECK (
+  auth.uid() = sender_id
+);
 
 -- Insert some default gifts
 INSERT INTO gifts (name, icon_url, coin_value) VALUES

@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.EXPO_PUBLIC_RORK_API_BASE_URL ? `${process.env.EXPO_PUBLIC_RORK_API_BASE_URL}/api` : 'http://localhost:3000/api';
+const API_BASE_URL = (process.env.EXPO_PUBLIC_RORK_API_BASE_URL ?? 'http://localhost:3000').replace(/\/$/, '') + '/api';
 
 export interface PresignResponse {
   uploadUrl: string;
