@@ -22,20 +22,23 @@ app.use("*", cors({
   allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
-app.route("/auth", auth);
-app.route("/meta", meta);
-app.route("/users", users);
-app.route("/streaming", streaming);
-app.route("/media", media);
-app.route("/notifications", notifications);
-app.route("/payments", payments);
-app.route("/analytics", analytics);
-app.route("/kyc", kyc);
+// Add /api prefix to all routes
+const api = new Hono();
 
-app.get("/openapi.json", (c) => c.json(buildOpenAPI()));
-app.get("/postman.json", (c) => c.json(buildPostmanCollection()));
+api.route("/auth", auth);
+api.route("/meta", meta);
+api.route("/users", users);
+api.route("/streaming", streaming);
+api.route("/media", media);
+api.route("/notifications", notifications);
+api.route("/payments", payments);
+api.route("/analytics", analytics);
+api.route("/kyc", kyc);
 
-app.get("/docs", (c) => {
+api.get("/openapi.json", (c) => c.json(buildOpenAPI()));
+api.get("/postman.json", (c) => c.json(buildPostmanCollection()));
+
+api.get("/docs", (c) => {
   const html = `<!DOCTYPE html>
   <html>
     <head>
@@ -59,7 +62,7 @@ app.get("/docs", (c) => {
   return c.html(html);
 });
 
-app.use(
+api.use(
   "/trpc/*",
   trpcServer({
     endpoint: "/api/trpc",
@@ -68,8 +71,8 @@ app.use(
   })
 );
 
-app.get("/", (c) => {
-  console.log('🚀 Root endpoint called');
+api.get("/", (c) => {
+  console.log('🚀 API Root endpoint called');
   console.log('🔍 Request headers:', Object.fromEntries(c.req.raw.headers.entries()));
   console.log('🔍 Request URL:', c.req.url);
   return c.json({ 
@@ -83,7 +86,7 @@ app.get("/", (c) => {
 });
 
 // Test endpoint for debugging
-app.get("/test", (c) => {
+api.get("/test", (c) => {
   console.log('🧪 Test endpoint called');
   return c.json({ 
     message: "Test endpoint working",
@@ -93,7 +96,7 @@ app.get("/test", (c) => {
 });
 
 // Health check endpoint
-app.get("/health", (c) => {
+api.get("/health", (c) => {
   console.log('🏥 Health check endpoint called');
   return c.json({ 
     status: "healthy",
@@ -109,9 +112,24 @@ app.get("/health", (c) => {
 });
 
 // Simple ping endpoint for connectivity testing
-app.get("/ping", (c) => {
+api.get("/ping", (c) => {
   console.log('🏓 Ping endpoint called');
   return c.json({ message: "pong", timestamp: new Date().toISOString() });
+});
+
+// Mount API routes under /api prefix
+app.route("/api", api);
+
+// Root endpoint for the main app
+app.get("/", (c) => {
+  console.log('🚀 Root endpoint called');
+  return c.json({ 
+    status: "ok", 
+    message: "Server is running",
+    timestamp: new Date().toISOString(),
+    api_docs: "/api/docs",
+    health_check: "/api/health"
+  });
 });
 
 export default app;
