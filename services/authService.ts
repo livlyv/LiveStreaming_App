@@ -1,4 +1,8 @@
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
+const API_BASE_URL = process.env.EXPO_PUBLIC_RORK_API_BASE_URL ? `${process.env.EXPO_PUBLIC_RORK_API_BASE_URL}/api` : 'http://localhost:3000/api';
+
+console.log('🔧 Auth Service Configuration:');
+console.log('🔧 EXPO_PUBLIC_RORK_API_BASE_URL:', process.env.EXPO_PUBLIC_RORK_API_BASE_URL);
+console.log('🔧 Final API_BASE_URL:', API_BASE_URL);
 
 export interface User {
   id: string;
@@ -35,21 +39,34 @@ class AuthService {
   ): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
     
-    const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-      ...options,
-    });
+    console.log('🌐 Making request to:', url);
+    console.log('📤 Request options:', JSON.stringify(options, null, 2));
+    
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+        ...options,
+      });
 
-    const data = await response.json();
+      console.log('📥 Response status:', response.status);
+      console.log('📥 Response headers:', JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2));
 
-    if (!response.ok) {
-      throw new Error(data.error || 'An error occurred');
+      const data = await response.json();
+      console.log('📥 Response data:', JSON.stringify(data, null, 2));
+
+      if (!response.ok) {
+        throw new Error(data.error || 'An error occurred');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('❌ Network request failed:', error);
+      console.error('❌ URL was:', url);
+      throw error;
     }
-
-    return data;
   }
 
   async requestOTP(phone: string): Promise<{ success: boolean; phone: string; message: string; mockCode?: string }> {

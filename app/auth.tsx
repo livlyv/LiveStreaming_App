@@ -15,6 +15,7 @@ import { router } from "expo-router";
 import { useAuth } from "@/providers/AuthProvider";
 import { authService } from "@/services/authService";
 import { Phone, Mail, Lock, User } from "lucide-react-native";
+import NetworkTest from "@/components/NetworkTest";
 
 export default function AuthScreen() {
   const { saveAuthData } = useAuth();
@@ -385,6 +386,8 @@ export default function AuthScreen() {
               <Text style={styles.termsLink}>Terms of Service</Text> and{" "}
               <Text style={styles.termsLink}>Privacy Policy</Text>
             </Text>
+
+            <NetworkTest />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

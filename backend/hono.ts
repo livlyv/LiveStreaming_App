@@ -64,7 +64,23 @@ app.use(
 );
 
 app.get("/", (c) => {
-  return c.json({ status: "ok", message: "API is running" });
+  console.log('🚀 Root endpoint called');
+  return c.json({ 
+    status: "ok", 
+    message: "API is running",
+    timestamp: new Date().toISOString(),
+    environment: process.env.APP_ENV || 'unknown'
+  });
+});
+
+// Test endpoint for debugging
+app.get("/test", (c) => {
+  console.log('🧪 Test endpoint called');
+  return c.json({ 
+    message: "Test endpoint working",
+    timestamp: new Date().toISOString(),
+    headers: Object.fromEntries(c.req.raw.headers.entries())
+  });
 });
 
 export default app;

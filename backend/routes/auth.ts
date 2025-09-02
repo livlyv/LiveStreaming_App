@@ -179,10 +179,13 @@ auth.post("/otp/verify", async (c) => {
 
 // Email Signup endpoint
 auth.post("/signup", async (c) => {
+  console.log('🔐 Signup endpoint called');
   try {
     const body = (await c.req.json().catch(() => ({}))) as Partial<EmailSignupBody>;
+    console.log('📝 Signup request body:', JSON.stringify(body, null, 2));
     
     if (!body.email || !body.password || !body.username) {
+      console.log('❌ Missing required fields:', { email: !!body.email, password: !!body.password, username: !!body.username });
       return c.json({ error: "Email, password, and username are required" }, 400);
     }
 
