@@ -13,11 +13,12 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useAuth } from "@/providers/AuthProvider";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { authService } from "@/services/authService";
 import { Phone, Mail, Lock, User } from "lucide-react-native";
 
 export default function AuthScreen() {
-  const { setUser } = useAuth();
+  const { saveAuthData } = useAuth();
+  const [authMode, setAuthMode] = useState<'phone' | 'email'>('phone');
   const [isLogin, setIsLogin] = useState(true);
   const [phoneNumber, setPhoneNumber] = useState("");
   const [otp, setOtp] = useState("");
@@ -26,14 +27,27 @@ export default function AuthScreen() {
   const [bio, setBio] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSendOtp = () => {
+  const handleSendOtp = async () => {
     if (phoneNumber.length < 10) {
       Alert.alert("Error", "Please enter a valid phone number");
       return;
     }
-    setShowOtp(true);
-    Alert.alert("OTP Sent", "A 6-digit OTP has been sent to your phone");
+
+    setIsLoading(true);
+    try {
+      const response = await authService.requestOTP(phoneNumber);
+      setShowOtp(true);
+      Alert.alert(
+        "OTP Sent", 
+        response.message + (response.mockCode ? `\n\nDev Code: ${response.mockCode}` : "")
+      );
+    } catch (error) {
+      Alert.alert("Error", error instanceof Error ? error.message : "Failed to send OTP");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleVerifyOtp = async () => {
@@ -42,57 +56,102 @@ export default function AuthScreen() {
       return;
     }
 
-    if (!isLogin && (!username || !bio)) {
-      Alert.alert("Error", "Please complete your profile");
+    if (!isLogin && !username) {
+      Alert.alert("Error", "Please enter a username");
       return;
     }
 
-    const userData = {
-      id: Date.now().toString(),
-      phoneNumber,
-      username: username || `user_${phoneNumber.slice(-4)}`,
-      bio: bio || "Hey there! I'm new here",
-      profilePic: `https://ui-avatars.com/api/?name=${username || phoneNumber}&background=E30CBD&color=fff`,
-      followers: 0,
-      following: 0,
-      totalLikes: 0,
-      coinsEarned: 0,
-      isVerified: false,
-    };
-
-    await AsyncStorage.setItem("user", JSON.stringify(userData));
-    setUser(userData);
-    router.replace("/(tabs)" as any);
+    setIsLoading(true);
+    try {
+      const response = await authService.verifyOTP(
+        phoneNumber, 
+        otp, 
+        !isLogin ? username : undefined, 
+        !isLogin ? bio : undefined
+      );
+      
+      const authTokens = {
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
+        expiresAt: Date.now() + (response.expiresIn * 1000)
+      };
+      
+      await saveAuthData(response.user, authTokens);
+      router.replace("/(tabs)" as any);
+    } catch (error) {
+      Alert.alert("Error", error instanceof Error ? error.message : "Authentication failed");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleSocialLogin = async (provider: string) => {
+  const handleEmailAuth = async () => {
+    if (!email || !password) {
+      Alert.alert("Error", "Please enter email and password");
+      return;
+    }
+
+    if (!isLogin && !username) {
+      Alert.alert("Error", "Please enter a username");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      if (isLogin) {
+        const response = await authService.login(email, password);
+        const authTokens = {
+          accessToken: response.accessToken,
+          refreshToken: response.refreshToken,
+          expiresAt: Date.now() + (response.expiresIn * 1000)
+        };
+        await saveAuthData(response.user, authTokens);
+        router.replace("/(tabs)" as any);
+      } else {
+        const response = await authService.signup(email, password, username, bio);
+        if (response.needsEmailVerification) {
+          Alert.alert(
+            "Check Your Email", 
+            "We've sent you a verification link. Please verify your email before logging in.",
+            [{ text: "OK", onPress: () => setIsLogin(true) }]
+          );
+        }
+      }
+    } catch (error) {
+      Alert.alert("Error", error instanceof Error ? error.message : "Authentication failed");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSocialLogin = async (provider: 'google' | 'facebook' | 'apple') => {
     Alert.alert(
       `${provider} Login`,
-      "Enter your email and password",
+      "Social login will be implemented with actual OAuth flow",
       [
         {
           text: "Cancel",
           style: "cancel",
         },
         {
-          text: "Login",
+          text: "Demo Login",
           onPress: async () => {
-            const userData = {
-              id: Date.now().toString(),
-              email: `user@${provider.toLowerCase()}.com`,
-              username: `${provider.toLowerCase()}_user`,
-              bio: "Hey there! I'm new here",
-              profilePic: `https://ui-avatars.com/api/?name=${provider}&background=6900D1&color=fff`,
-              followers: 0,
-              following: 0,
-              totalLikes: 0,
-              coinsEarned: 0,
-              isVerified: false,
-            };
-
-            await AsyncStorage.setItem("user", JSON.stringify(userData));
-            setUser(userData);
-            router.replace("/(tabs)" as any);
+            setIsLoading(true);
+            try {
+              // For demo purposes, use a mock token
+              const response = await authService.socialAuth(provider, 'mock_token');
+              const authTokens = {
+                accessToken: response.accessToken,
+                refreshToken: response.refreshToken,
+                expiresAt: Date.now() + (response.expiresIn * 1000)
+              };
+              await saveAuthData(response.user, authTokens);
+              router.replace("/(tabs)" as any);
+            } catch (error) {
+              Alert.alert("Error", error instanceof Error ? error.message : "Social login failed");
+            } finally {
+              setIsLoading(false);
+            }
           },
         },
       ]
@@ -124,84 +183,149 @@ export default function AuthScreen() {
           </View>
 
           <View style={styles.form}>
-            <View style={styles.inputContainer}>
-              <Phone size={20} color="#E30CBD" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Enter phone number"
-                placeholderTextColor="#666"
-                value={phoneNumber}
-                onChangeText={setPhoneNumber}
-                keyboardType="phone-pad"
-                maxLength={10}
-              />
-              <Text style={styles.countryCode}>+91</Text>
+            <View style={styles.authModeToggle}>
+              <TouchableOpacity
+                style={[styles.modeButton, authMode === 'phone' && styles.activeModeButton]}
+                onPress={() => {
+                  setAuthMode('phone');
+                  setShowOtp(false);
+                  setOtp('');
+                }}
+              >
+                <Text style={[styles.modeButtonText, authMode === 'phone' && styles.activeModeButtonText]}>Phone</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modeButton, authMode === 'email' && styles.activeModeButton]}
+                onPress={() => {
+                  setAuthMode('email');
+                  setShowOtp(false);
+                  setOtp('');
+                }}
+              >
+                <Text style={[styles.modeButtonText, authMode === 'email' && styles.activeModeButtonText]}>Email</Text>
+              </TouchableOpacity>
             </View>
 
-            {!showOtp && (
-              <TouchableOpacity onPress={handleSendOtp}>
-                <LinearGradient
-                  colors={["#E30CBD", "#6900D1"]}
-                  style={styles.button}
-                >
-                  <Text style={styles.buttonText}>Send OTP</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            )}
-
-            {showOtp && (
+            {authMode === 'phone' ? (
               <>
+                <View style={styles.inputContainer}>
+                  <Phone size={20} color="#E30CBD" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter phone number"
+                    placeholderTextColor="#666"
+                    value={phoneNumber}
+                    onChangeText={setPhoneNumber}
+                    keyboardType="phone-pad"
+                    maxLength={10}
+                    editable={!isLoading}
+                  />
+                  <Text style={styles.countryCode}>+91</Text>
+                </View>
+
+                {!showOtp && (
+                  <TouchableOpacity onPress={handleSendOtp} disabled={isLoading}>
+                    <LinearGradient
+                      colors={["#E30CBD", "#6900D1"]}
+                      style={[styles.button, isLoading && styles.disabledButton]}
+                    >
+                      <Text style={styles.buttonText}>
+                        {isLoading ? "Sending..." : "Send OTP"}
+                      </Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                )}
+              </>
+            ) : (
+              <>
+                <View style={styles.inputContainer}>
+                  <Mail size={20} color="#E30CBD" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter email address"
+                    placeholderTextColor="#666"
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    editable={!isLoading}
+                  />
+                </View>
+
                 <View style={styles.inputContainer}>
                   <Lock size={20} color="#E30CBD" style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
-                    placeholder="Enter 6-digit OTP"
+                    placeholder="Enter password"
                     placeholderTextColor="#666"
-                    value={otp}
-                    onChangeText={setOtp}
-                    keyboardType="number-pad"
-                    maxLength={6}
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry
+                    editable={!isLoading}
+                  />
+                </View>
+              </>
+            )}
+
+            {(showOtp && authMode === 'phone') && (
+              <View style={styles.inputContainer}>
+                <Lock size={20} color="#E30CBD" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter 6-digit OTP"
+                  placeholderTextColor="#666"
+                  value={otp}
+                  onChangeText={setOtp}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  editable={!isLoading}
+                />
+              </View>
+            )}
+
+            {!isLogin && (
+              <>
+                <View style={styles.inputContainer}>
+                  <User size={20} color="#E30CBD" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Choose username"
+                    placeholderTextColor="#666"
+                    value={username}
+                    onChangeText={setUsername}
+                    editable={!isLoading}
                   />
                 </View>
 
-                {!isLogin && (
-                  <>
-                    <View style={styles.inputContainer}>
-                      <User size={20} color="#E30CBD" style={styles.inputIcon} />
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Choose username"
-                        placeholderTextColor="#666"
-                        value={username}
-                        onChangeText={setUsername}
-                      />
-                    </View>
-
-                    <View style={styles.inputContainer}>
-                      <TextInput
-                        style={[styles.input, styles.bioInput]}
-                        placeholder="Write a short bio"
-                        placeholderTextColor="#666"
-                        value={bio}
-                        onChangeText={setBio}
-                        multiline
-                        numberOfLines={3}
-                      />
-                    </View>
-                  </>
-                )}
-
-                <TouchableOpacity onPress={handleVerifyOtp}>
-                  <LinearGradient
-                    colors={["#E30CBD", "#6900D1"]}
-                    style={styles.button}
-                  >
-                    <Text style={styles.buttonText}>
-                      {isLogin ? "Login" : "Sign Up"}
-                    </Text>
-                  </LinearGradient>
-                </TouchableOpacity>
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={[styles.input, styles.bioInput]}
+                    placeholder="Write a short bio (optional)"
+                    placeholderTextColor="#666"
+                    value={bio}
+                    onChangeText={setBio}
+                    multiline
+                    numberOfLines={3}
+                    editable={!isLoading}
+                  />
+                </View>
               </>
+            )}
+
+            {((showOtp && authMode === 'phone') || authMode === 'email') && (
+              <TouchableOpacity 
+                onPress={authMode === 'phone' ? handleVerifyOtp : handleEmailAuth}
+                disabled={isLoading}
+              >
+                <LinearGradient
+                  colors={["#E30CBD", "#6900D1"]}
+                  style={[styles.button, isLoading && styles.disabledButton]}
+                >
+                  <Text style={styles.buttonText}>
+                    {isLoading ? "Processing..." : (isLogin ? "Login" : "Sign Up")}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
             )}
 
             <View style={styles.divider}>
@@ -213,14 +337,16 @@ export default function AuthScreen() {
             <View style={styles.socialButtons}>
               <TouchableOpacity
                 style={styles.socialButton}
-                onPress={() => handleSocialLogin("Google")}
+                onPress={() => handleSocialLogin("google")}
+                disabled={isLoading}
               >
                 <Text style={styles.socialButtonText}>G</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={styles.socialButton}
-                onPress={() => handleSocialLogin("Facebook")}
+                onPress={() => handleSocialLogin("facebook")}
+                disabled={isLoading}
               >
                 <Text style={styles.socialButtonText}>f</Text>
               </TouchableOpacity>
@@ -228,7 +354,8 @@ export default function AuthScreen() {
               {Platform.OS === "ios" && (
                 <TouchableOpacity
                   style={styles.socialButton}
-                  onPress={() => handleSocialLogin("Apple")}
+                  onPress={() => handleSocialLogin("apple")}
+                  disabled={isLoading}
                 >
                   <Text style={styles.socialButtonText}>🍎</Text>
                 </TouchableOpacity>
@@ -241,7 +368,10 @@ export default function AuthScreen() {
                 setIsLogin(!isLogin);
                 setShowOtp(false);
                 setOtp("");
+                setUsername("");
+                setBio("");
               }}
+              disabled={isLoading}
             >
               <Text style={styles.switchText}>
                 {isLogin
@@ -383,5 +513,32 @@ const styles = StyleSheet.create({
   termsLink: {
     color: "#E30CBD",
     textDecorationLine: "underline",
+  },
+  authModeToggle: {
+    flexDirection: "row",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 25,
+    marginBottom: 20,
+    padding: 4,
+  },
+  modeButton: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: "center",
+    borderRadius: 20,
+  },
+  activeModeButton: {
+    backgroundColor: "#E30CBD",
+  },
+  modeButtonText: {
+    color: "#999",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  activeModeButtonText: {
+    color: "#FFFFFF",
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
 });
