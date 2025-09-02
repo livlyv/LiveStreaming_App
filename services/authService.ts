@@ -43,28 +43,55 @@ class AuthService {
     console.log('📤 Request options:', JSON.stringify(options, null, 2));
     
     try {
+      // Add timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      
       const response = await fetch(url, {
         headers: {
           'Content-Type': 'application/json',
           ...options.headers,
         },
+        signal: controller.signal,
         ...options,
       });
+      
+      clearTimeout(timeoutId);
 
       console.log('📥 Response status:', response.status);
       console.log('📥 Response headers:', JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2));
 
-      const data = await response.json();
+      const contentType = response.headers.get('content-type');
+      let data;
+      
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        console.log('📥 Non-JSON response:', text);
+        throw new Error(`Server returned non-JSON response: ${text}`);
+      }
+      
       console.log('📥 Response data:', JSON.stringify(data, null, 2));
 
       if (!response.ok) {
-        throw new Error(data.error || 'An error occurred');
+        throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
       return data;
     } catch (error) {
       console.error('❌ Network request failed:', error);
       console.error('❌ URL was:', url);
+      
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          throw new Error('Request timeout - please check your internet connection');
+        }
+        if (error.message.includes('Network request failed') || error.message.includes('fetch')) {
+          throw new Error('Network error - please check if the server is running and accessible');
+        }
+      }
+      
       throw error;
     }
   }

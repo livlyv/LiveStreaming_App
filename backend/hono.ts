@@ -16,7 +16,7 @@ import kyc from "./routes/kyc";
 const app = new Hono();
 
 app.use("*", cors({
-  origin: ['http://localhost:3000', 'https://dev-bo44fwxvov01657rf6ttq.rorktest.dev', 'http://localhost:8081'],
+  origin: ['http://localhost:3000', 'https://dev-bo44fwxvov01657rf6ttq.rorktest.dev', 'http://localhost:8081', 'exp://192.168.1.100:8081', 'exp://localhost:8081'],
   credentials: true,
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -70,11 +70,15 @@ app.use(
 
 app.get("/", (c) => {
   console.log('🚀 Root endpoint called');
+  console.log('🔍 Request headers:', Object.fromEntries(c.req.raw.headers.entries()));
+  console.log('🔍 Request URL:', c.req.url);
   return c.json({ 
     status: "ok", 
     message: "API is running",
     timestamp: new Date().toISOString(),
-    environment: process.env.APP_ENV || 'unknown'
+    environment: process.env.APP_ENV || 'unknown',
+    url: c.req.url,
+    method: c.req.method
   });
 });
 
@@ -90,6 +94,7 @@ app.get("/test", (c) => {
 
 // Health check endpoint
 app.get("/health", (c) => {
+  console.log('🏥 Health check endpoint called');
   return c.json({ 
     status: "healthy",
     timestamp: new Date().toISOString(),
@@ -98,8 +103,15 @@ app.get("/health", (c) => {
       anon_key: process.env.SUPABASE_ANON_KEY ? 'configured' : 'missing',
       service_key: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'configured' : 'missing'
     },
-    jwt_secret: process.env.JWT_SECRET ? 'configured' : 'missing'
+    jwt_secret: process.env.JWT_SECRET ? 'configured' : 'missing',
+    cors_origins: ['http://localhost:3000', 'https://dev-bo44fwxvov01657rf6ttq.rorktest.dev', 'http://localhost:8081', 'exp://192.168.1.100:8081', 'exp://localhost:8081']
   });
+});
+
+// Simple ping endpoint for connectivity testing
+app.get("/ping", (c) => {
+  console.log('🏓 Ping endpoint called');
+  return c.json({ message: "pong", timestamp: new Date().toISOString() });
 });
 
 export default app;
