@@ -6,18 +6,19 @@ import { useAuth } from "@/providers/AuthProvider";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function SplashScreen() {
-  const { setUser } = useAuth();
+  const { user, isLoading } = useAuth();
   const scaleAnim = new Animated.Value(0.8);
   const opacityAnim = new Animated.Value(0);
 
   const checkAuthStatus = useCallback(async () => {
     try {
-      const userData = await AsyncStorage.getItem("user");
+      // Wait for auth provider to finish loading
+      if (isLoading) return;
+      
       const hasSeenOnboarding = await AsyncStorage.getItem("hasSeenOnboarding");
       
       setTimeout(() => {
-        if (userData) {
-          setUser(JSON.parse(userData));
+        if (user) {
           router.replace("/(tabs)" as any);
         } else if (hasSeenOnboarding) {
           router.replace("/auth" as any);
@@ -29,7 +30,7 @@ export default function SplashScreen() {
       console.error("Auth check error:", error);
       router.replace("/onboarding" as any);
     }
-  }, [setUser]);
+  }, [user, isLoading]);
 
   useEffect(() => {
     Animated.parallel([

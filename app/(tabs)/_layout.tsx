@@ -14,6 +14,7 @@ import { LinearGradient } from "expo-linear-gradient";
 export default function TabLayout() {
   return (
     <Tabs
+      initialRouteName="home"
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
