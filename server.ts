@@ -1,3 +1,7 @@
+// Load environment variables first
+import { config } from 'dotenv';
+config();
+
 import app from './backend/hono';
 import { networkInterfaces } from 'os';
 
