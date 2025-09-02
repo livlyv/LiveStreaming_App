@@ -58,12 +58,12 @@ export default function OnboardingScreen() {
 
   const handleSkip = async () => {
     await AsyncStorage.setItem("hasSeenOnboarding", "true");
-    router.replace("/auth" as any);
+    router.replace("/auth");
   };
 
   const handleGetStarted = async () => {
     await AsyncStorage.setItem("hasSeenOnboarding", "true");
-    router.replace("/auth" as any);
+    router.replace("/auth");
   };
 
   const handleScroll = (event: any) => {

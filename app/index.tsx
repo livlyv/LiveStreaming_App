@@ -46,7 +46,7 @@ export default function SplashScreen() {
         setTimeout(() => {
           if (user) {
             console.log("✅ User authenticated, navigating to tabs");
-            router.replace("/(tabs)/home");
+            router.replace("/(tabs)");
           } else if (hasSeenOnboarding) {
             console.log("🔐 Navigating to auth");
             router.replace("/auth");

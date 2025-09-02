@@ -78,7 +78,7 @@ export default function AuthScreen() {
       };
       
       await saveAuthData(response.user, authTokens);
-      router.replace("/(tabs)" as any);
+      router.replace("/(tabs)");
     } catch (error) {
       Alert.alert("Error", error instanceof Error ? error.message : "Authentication failed");
     } finally {
