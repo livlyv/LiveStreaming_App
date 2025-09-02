@@ -16,7 +16,7 @@ import kyc from "./routes/kyc";
 const app = new Hono();
 
 app.use("*", cors({
-  origin: ['http://localhost:3000', 'https://dev-bo44fwxvov01657rf6ttq.rorktest.dev', 'http://localhost:8081', 'exp://192.168.1.100:8081', 'exp://localhost:8081'],
+  origin: '*', // Allow all origins for development
   credentials: true,
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
