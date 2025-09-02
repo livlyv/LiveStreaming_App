@@ -46,10 +46,10 @@ Bun.serve({
 
 if (isProduction) {
   console.log(`✅ Server is running in PRODUCTION mode:`);
-  console.log(`   🌐 Production URL: ${baseUrl}`);
-  console.log(`   📱 API endpoints: ${baseUrl}/api/`);
-  console.log(`   ✅ Try the signup endpoint: ${baseUrl}/api/auth/signup`);
-  console.log(`\n🔧 Frontend should use: EXPO_PUBLIC_RORK_API_BASE_URL=${baseUrl}`);
+  console.log(`   🌐 Production URL: ${serverUrl}`);
+  console.log(`   📱 API endpoints: ${serverUrl}/api/`);
+  console.log(`   ✅ Try the signup endpoint: ${serverUrl}/api/auth/signup`);
+  console.log(`\n🔧 Frontend should use: EXPO_PUBLIC_RORK_API_BASE_URL=${serverUrl}`);
 } else {
   console.log(`✅ Server is running in DEVELOPMENT mode:`);
   console.log(`   📱 For mobile/Expo: http://${localIP}:${port}`);
