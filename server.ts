@@ -23,6 +23,10 @@ function getLocalIP() {
 
 const localIP = getLocalIP();
 
+console.log('🔧 Supabase Environment Check:');
+console.log('🔧 SUPABASE_URL:', process.env.SUPABASE_URL ? 'configured' : 'missing');
+console.log('🔧 SUPABASE_ANON_KEY:', process.env.SUPABASE_ANON_KEY ? 'configured' : 'missing');
+console.log('🔧 SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'configured' : 'missing');
 console.log('🚀 Server starting...');
 console.log(`📚 API Documentation: http://localhost:${port}/api/docs`);
 console.log(`🏥 Health Check: http://localhost:${port}/api/health`);

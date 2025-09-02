@@ -15,6 +15,18 @@ import kyc from "./routes/kyc";
 
 const app = new Hono();
 
+// Add request logging middleware
+app.use("*", async (c, next) => {
+  const start = Date.now();
+  console.log(`🌐 ${c.req.method} ${c.req.url}`);
+  console.log(`📍 Headers:`, Object.fromEntries(c.req.raw.headers.entries()));
+  
+  await next();
+  
+  const end = Date.now();
+  console.log(`✅ ${c.req.method} ${c.req.url} - ${end - start}ms`);
+});
+
 app.use("*", cors({
   origin: '*', // Allow all origins for development
   credentials: true,
@@ -114,7 +126,14 @@ api.get("/health", (c) => {
 // Simple ping endpoint for connectivity testing
 api.get("/ping", (c) => {
   console.log('🏓 Ping endpoint called');
-  return c.json({ message: "pong", timestamp: new Date().toISOString() });
+  console.log('🏓 Request from:', c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || 'unknown');
+  console.log('🏓 User-Agent:', c.req.header('user-agent') || 'unknown');
+  return c.json({ 
+    message: "pong", 
+    timestamp: new Date().toISOString(),
+    ip: c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || 'unknown',
+    userAgent: c.req.header('user-agent') || 'unknown'
+  });
 });
 
 // Mount API routes under /api prefix

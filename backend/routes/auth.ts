@@ -305,8 +305,10 @@ auth.post("/login", async (c) => {
 
 // Social Auth endpoint (Google, Facebook, Apple)
 auth.post("/social", async (c) => {
+  console.log('🔐 Social auth endpoint called');
   try {
     const body = (await c.req.json().catch(() => ({}))) as Partial<SocialAuthBody>;
+    console.log('📝 Social auth request body:', JSON.stringify(body, null, 2));
     
     if (!body.provider || !body.token) {
       return c.json({ error: "Provider and token are required" }, 400);
