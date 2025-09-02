@@ -162,6 +162,30 @@ class AuthService {
       },
     });
   }
+
+  async testConnection(): Promise<{ success: boolean; message: string }> {
+    const baseUrl = API_BASE_URL.replace('/api', '');
+    console.log('🔧 Testing connection to:', baseUrl);
+    
+    try {
+      const response = await fetch(`${baseUrl}/api/health`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        await response.json();
+        return { success: true, message: 'Connection successful' };
+      } else {
+        return { success: false, message: `Server responded with status ${response.status}` };
+      }
+    } catch (error) {
+      console.error('❌ Network test failed:', error);
+      return { success: false, message: `Connection failed: ${error}` };
+    }
+  }
 }
 
 export const authService = new AuthService();
