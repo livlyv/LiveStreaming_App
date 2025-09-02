@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from "react";
+import React, { useEffect } from "react";
 import { View, Text, StyleSheet, Animated } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -10,29 +10,10 @@ export default function SplashScreen() {
   const scaleAnim = new Animated.Value(0.8);
   const opacityAnim = new Animated.Value(0);
 
-  const checkAuthStatus = useCallback(async () => {
-    try {
-      // Wait for auth provider to finish loading
-      if (isLoading) return;
-      
-      const hasSeenOnboarding = await AsyncStorage.getItem("hasSeenOnboarding");
-      
-      setTimeout(() => {
-        if (user) {
-          router.replace("/(tabs)" as any);
-        } else if (hasSeenOnboarding) {
-          router.replace("/auth" as any);
-        } else {
-          router.replace("/onboarding" as any);
-        }
-      }, 2000);
-    } catch (error) {
-      console.error("Auth check error:", error);
-      router.replace("/onboarding" as any);
-    }
-  }, [user, isLoading]);
-
   useEffect(() => {
+    console.log("🚀 Splash screen mounted");
+    
+    // Start animations
     Animated.parallel([
       Animated.spring(scaleAnim, {
         toValue: 1,
@@ -47,8 +28,43 @@ export default function SplashScreen() {
       }),
     ]).start();
 
-    checkAuthStatus();
-  }, [checkAuthStatus, scaleAnim, opacityAnim]);
+    // Navigation logic
+    const navigate = async () => {
+      try {
+        console.log("🔍 Checking auth status...", { user: !!user, isLoading });
+        
+        // Wait for auth provider to finish loading
+        if (isLoading) {
+          console.log("⏳ Still loading auth, waiting...");
+          return;
+        }
+        
+        const hasSeenOnboarding = await AsyncStorage.getItem("hasSeenOnboarding");
+        console.log("📱 Onboarding status:", hasSeenOnboarding);
+        
+        // Add a delay to ensure splash screen is visible
+        setTimeout(() => {
+          if (user) {
+            console.log("✅ User authenticated, navigating to tabs");
+            router.replace("/(tabs)/home");
+          } else if (hasSeenOnboarding) {
+            console.log("🔐 Navigating to auth");
+            router.replace("/auth");
+          } else {
+            console.log("👋 Navigating to onboarding");
+            router.replace("/onboarding");
+          }
+        }, 2000);
+      } catch (error) {
+        console.error("❌ Auth check error:", error);
+        setTimeout(() => {
+          router.replace("/onboarding");
+        }, 2000);
+      }
+    };
+
+    navigate();
+  }, [user, isLoading]);
 
 
 
