@@ -1,36 +1,16 @@
-import React, { useEffect } from "react";
-import { View, Text, StyleSheet, Animated, Dimensions } from "react-native";
+import React, { useEffect, useCallback } from "react";
+import { View, Text, StyleSheet, Animated } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useAuth } from "@/providers/AuthProvider";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-const { width, height } = Dimensions.get("window");
 
 export default function SplashScreen() {
   const { setUser } = useAuth();
   const scaleAnim = new Animated.Value(0.8);
   const opacityAnim = new Animated.Value(0);
 
-  useEffect(() => {
-    Animated.parallel([
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        tension: 10,
-        friction: 2,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    checkAuthStatus();
-  }, []);
-
-  const checkAuthStatus = async () => {
+  const checkAuthStatus = useCallback(async () => {
     try {
       const userData = await AsyncStorage.getItem("user");
       const hasSeenOnboarding = await AsyncStorage.getItem("hasSeenOnboarding");
@@ -49,7 +29,27 @@ export default function SplashScreen() {
       console.error("Auth check error:", error);
       router.replace("/onboarding" as any);
     }
-  };
+  }, [setUser]);
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 10,
+        friction: 2,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    checkAuthStatus();
+  }, [checkAuthStatus, scaleAnim, opacityAnim]);
+
+
 
   return (
     <LinearGradient
