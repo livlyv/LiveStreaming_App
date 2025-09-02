@@ -6,11 +6,6 @@ import app from './backend/hono';
 import { networkInterfaces } from 'os';
 
 const port = process.env.PORT || 3000;
-const localIP = getLocalIP();
-//const baseUrl = process.env.BASE_URL || `http://localhost:${port}`;
-const isProduction = process.env.APP_ENV === 'production';
-const baseUrl = isProduction ? baseUrl : `http://${localIP}:${port}`;
-
 
 // Get local IP address (only for development)
 function getLocalIP() {
@@ -26,6 +21,10 @@ function getLocalIP() {
   return 'localhost';
 }
 
+const localIP = getLocalIP();
+//const baseUrl = process.env.BASE_URL || `http://localhost:${port}`;
+const isProduction = process.env.APP_ENV === 'production';
+const baseUrl = isProduction ? baseUrl : `http://${localIP}:${port}`;
 
 const serverUrl = isProduction ? baseUrl : `http://${localIP}:${port}`;
 
