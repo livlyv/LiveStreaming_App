@@ -116,7 +116,7 @@ class AuthService {
     user: User;
     needsEmailVerification: boolean;
   }> {
-    return this.makeRequest('/auth/signup', {
+    return this.makeRequest('/auth/email/signup', {
       method: 'POST',
       body: JSON.stringify({ email, password, username, bio }),
     });
@@ -133,6 +133,13 @@ class AuthService {
     return this.makeRequest('/auth/social', {
       method: 'POST',
       body: JSON.stringify({ provider, token }),
+    });
+  }
+
+  async googleSignIn(idToken: string): Promise<AuthResponse> {
+    return this.makeRequest('/auth/social', {
+      method: 'POST',
+      body: JSON.stringify({ provider: 'google', token: idToken }),
     });
   }
 
@@ -155,7 +162,7 @@ class AuthService {
   }
 
   async getCurrentUser(accessToken: string): Promise<{ user: User }> {
-    return this.makeRequest('/auth/me', {
+    return this.makeRequest('/users/profile', {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${accessToken}`,

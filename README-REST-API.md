@@ -91,6 +91,7 @@ services/
 - `POST /api/auth/email/login` - Email login
 - `POST /api/auth/refresh` - Refresh access token
 - `POST /api/auth/logout` - Logout
+- `POST /api/auth/social` - Social authentication (placeholder)
 
 ### Users
 - `GET /api/users/profile` - Get current user profile
