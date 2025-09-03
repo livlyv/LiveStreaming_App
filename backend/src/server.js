@@ -20,8 +20,8 @@ const app = express();
 const PORT = BACKEND_PORT;
 const HOST = BACKEND_HOST;
 
-// Trust proxy for ngrok and load balancers
-app.set('trust proxy', true);
+// Trust proxy for ngrok and load balancers (more secure)
+app.set('trust proxy', 'loopback, 127.0.0.1, ::1, 192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12');
 
 // Security middleware
 app.use(helmet());
@@ -66,7 +66,13 @@ app.use(cors({
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    // Use X-Forwarded-For header if available, otherwise use IP
+    return req.headers['x-forwarded-for']?.split(',')[0] || req.ip;
+  }
 });
 app.use('/api/', limiter);
 
@@ -108,6 +114,79 @@ app.get('/health', (req, res) => {
     },
     jwt_secret: process.env.JWT_SECRET ? 'configured' : 'missing'
   });
+});
+
+// OAuth callback endpoint (accessible without /api prefix)
+app.get('/auth/callback', async (req, res) => {
+  console.log('🔄 OAuth callback received at root level');
+  console.log('📝 Query params:', req.query);
+  
+  const { error, code, state } = req.query;
+  
+  if (error) {
+    console.error('❌ OAuth error:', error);
+    return res.status(400).json({ error: 'OAuth authentication failed' });
+  }
+  
+  // Handle authorization code flow (Supabase OAuth)
+  if (code) {
+    console.log('✅ Authorization code received:', code.substring(0, 20) + '...');
+    console.log('🔍 State parameter:', state ? 'Present' : 'Missing');
+    
+    try {
+      // Exchange the authorization code for Supabase session
+      const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.exchangeCodeForSession(code);
+      
+      if (sessionError) {
+        console.error('❌ Session exchange error:', sessionError);
+        return res.status(400).json({ error: 'Failed to exchange code for session' });
+      }
+      
+      if (!sessionData.session) {
+        console.error('❌ No session received from Supabase');
+        return res.status(400).json({ error: 'No session received' });
+      }
+      
+      console.log('✅ Supabase session created successfully');
+      
+      // Get or create user in our database
+      const user = await getOrCreateUserFromSupabase(sessionData.session.user);
+      
+      if (!user) {
+        console.error('❌ Failed to create/get user from database');
+        return res.status(500).json({ error: 'Failed to process user data' });
+      }
+      
+      console.log('✅ User processed successfully:', user.email);
+      
+      // Generate custom JWT tokens for our backend
+      const accessToken = jwt.sign(
+        { userId: user.id, email: user.email },
+        process.env.JWT_SECRET,
+        { expiresIn: '1h' }
+      );
+      
+      const refreshToken = jwt.sign(
+        { userId: user.id, type: 'refresh' },
+        process.env.JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+      
+      // Redirect to Expo app with tokens
+      const redirectUrl = `exp://localhost:8081?access_token=${encodeURIComponent(accessToken)}&refresh_token=${encodeURIComponent(refreshToken)}&user_id=${user.id}&email=${encodeURIComponent(user.email)}`;
+      
+      console.log('🔄 Redirecting to Expo app with tokens:', redirectUrl);
+      
+      return res.redirect(302, redirectUrl);
+      
+    } catch (error) {
+      console.error('❌ Error processing OAuth callback:', error);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+  
+  console.error('❌ No authorization code received');
+  return res.status(400).json({ error: 'No authorization code received' });
 });
 
 // API routes

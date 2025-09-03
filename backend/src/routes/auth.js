@@ -3,6 +3,7 @@ const { body, validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const asyncHandler = require('express-async-handler');
+const fetch = require('node-fetch');
 const { supabaseAdmin } = require('../config/database');
 const { generateTokenPair } = require('../utils/jwt');
 
@@ -30,7 +31,6 @@ async function createUser(userData) {
       username: userData.username,
       bio: userData.bio || "Hey there! I'm new here",
       profile_pic: userData.profile_pic || `https://ui-avatars.com/api/?name=${userData.username}&background=E30CBD&color=fff`,
-      password: userData.password,
       followers: 0,
       following: 0,
       total_likes: 0,
@@ -38,10 +38,17 @@ async function createUser(userData) {
       is_verified: false
     };
 
+    // Only include password if it's provided (for email auth users)
+    if (userData.password) {
+      insertData.password = userData.password;
+    }
+
     // Only include id if it's provided (for Supabase Auth users)
     if (userData.id) {
       insertData.id = userData.id;
     }
+
+    console.log('📝 Creating user with data:', { ...insertData, password: insertData.password ? '[HIDDEN]' : null });
 
     const { data, error } = await supabaseAdmin
       .from('users')
@@ -50,16 +57,188 @@ async function createUser(userData) {
       .single();
 
     if (error) {
-      console.error('Error creating user:', error);
+      console.error('❌ Error creating user:', error);
       return null;
     }
 
+    console.log('✅ User created successfully:', data.id);
     return data;
   } catch (err) {
-    console.error('Error creating user:', err);
+    console.error('❌ Error creating user:', err);
     return null;
   }
 }
+
+// Helper function to get or create user from Supabase Auth
+async function getOrCreateUserFromSupabase(supabaseUser) {
+  try {
+    console.log('🔍 Checking if user exists in our database:', supabaseUser.id);
+    
+    // Check if user already exists in our users table
+    const { data: existingUser, error: fetchError } = await supabaseAdmin
+      .from('users')
+      .select('*')
+      .eq('id', supabaseUser.id)
+      .single();
+
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      console.error('❌ Error fetching user:', fetchError);
+      return null;
+    }
+
+    if (existingUser) {
+      console.log('✅ User found in database:', existingUser.id);
+      return existingUser;
+    }
+
+    // User doesn't exist, create new user
+    console.log('📝 Creating new user from Supabase Auth data');
+    
+    const userData = {
+      id: supabaseUser.id,
+      email: supabaseUser.email,
+      username: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'User',
+      bio: `Hi, I'm ${supabaseUser.user_metadata?.full_name || 'new here'}!`,
+      profile_pic: supabaseUser.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${supabaseUser.user_metadata?.full_name || 'User'}&background=E30CBD&color=fff`,
+      followers: 0,
+      following: 0,
+      total_likes: 0,
+      coins_earned: 0,
+      is_verified: supabaseUser.email_confirmed_at ? true : false,
+      phone: null
+    };
+
+    const newUser = await createUser(userData);
+    if (newUser) {
+      console.log('✅ New user created from Supabase Auth:', newUser.id);
+      return newUser;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('❌ Error in getOrCreateUserFromSupabase:', error);
+    return null;
+  }
+}
+
+// Google OAuth Initiation endpoint
+router.get('/google/init', asyncHandler(async (req, res) => {
+  console.log('🔐 Google OAuth initiation requested');
+  
+  try {
+    const { redirectTo } = req.query;
+    const baseUrl = process.env.SUPABASE_URL;
+    // Always use Expo Auth Proxy for mobile OAuth
+    const redirectUrl = 'https://auth.expo.io/@rahul_1996_s/rork-app';
+    
+    // Construct Supabase OAuth URL with direct redirect to Expo Auth Proxy
+    const oauthUrl = `${baseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}&access_type=offline&prompt=consent`;
+    
+    console.log('🔗 Redirecting to Supabase OAuth:', oauthUrl);
+    console.log('🎯 Final redirect will be to:', redirectUrl);
+    
+    res.json({
+      success: true,
+      oauthUrl,
+      message: 'Google OAuth URL generated successfully'
+    });
+  } catch (error) {
+    console.error('❌ Error generating OAuth URL:', error);
+    res.status(500).json({
+      error: 'Failed to generate OAuth URL',
+      message: error.message
+    });
+  }
+}));
+
+// Google OAuth Token Exchange endpoint (for mobile apps)
+router.post('/google/exchange', asyncHandler(async (req, res) => {
+  console.log('🔄 Google OAuth token exchange requested');
+  
+  try {
+    const { code } = req.body;
+    
+    if (!code) {
+      return res.status(400).json({
+        error: 'Authorization code is required',
+        message: 'No authorization code provided'
+      });
+    }
+
+    console.log('🔍 Exchanging authorization code for session...');
+    
+    // Exchange the authorization code for a session using Supabase
+    const { data, error } = await supabaseAdmin.auth.exchangeCodeForSession(code);
+    
+    if (error) {
+      console.error('❌ Error exchanging code for session:', error);
+      return res.status(400).json({
+        error: 'Token exchange failed',
+        message: error.message
+      });
+    }
+
+    if (!data.session || !data.user) {
+      return res.status(400).json({
+        error: 'Invalid session data',
+        message: 'No session or user data returned from token exchange'
+      });
+    }
+
+    console.log('✅ Token exchange successful for user:', data.user.email);
+    
+    // Get or create user in our database
+    const appUser = await getOrCreateUserFromSupabase(data.user);
+    
+    if (!appUser) {
+      return res.status(500).json({
+        error: 'Failed to process user',
+        message: 'Could not create or retrieve user from database'
+      });
+    }
+
+    // Generate JWT tokens for our backend
+    const tokens = generateTokenPair(appUser);
+    
+    console.log('✅ Google OAuth token exchange successful for user:', appUser.email);
+    
+    res.json({
+      success: true,
+      message: 'Google OAuth token exchange successful',
+      user: {
+        id: appUser.id,
+        email: appUser.email,
+        username: appUser.username,
+        profile_pic: appUser.profile_pic,
+        bio: appUser.bio,
+        is_verified: appUser.is_verified,
+        followers: appUser.followers,
+        following: appUser.following,
+        total_likes: appUser.total_likes,
+        coins_earned: appUser.coins_earned,
+        created_at: appUser.created_at,
+        updated_at: appUser.updated_at
+      },
+      tokens: {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        expiresIn: 3600 // 1 hour
+      },
+      supabaseSession: {
+        accessToken: data.session.access_token,
+        refreshToken: data.session.refresh_token,
+        expiresAt: data.session.expires_at
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Google OAuth token exchange error:', error);
+    res.status(500).json({
+      error: 'Token exchange failed',
+      message: error.message
+    });
+  }
+}));
 
 // OTP Request endpoint
 router.post('/otp/request', 
@@ -332,6 +511,14 @@ router.post('/logout', asyncHandler(async (req, res) => {
   // For now, we'll just return a success response
   res.json({ message: 'Logged out successfully' });
 }));
+
+// Note: Google OAuth is now handled by Supabase Auth
+// Removed custom OAuth endpoints as they're no longer needed
+
+// Note: Social Auth is now handled by Supabase Auth
+// Removed custom social auth endpoint as it's no longer needed
+
+// Note: OAuth callback is now handled at root level (/auth/callback)
 
 // Helper function to get user by identifier
 async function getUserByIdentifier(identifier, type) {
