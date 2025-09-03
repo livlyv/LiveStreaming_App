@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.EXPO_PUBLIC_RORK_API_BASE_URL ? `${process.env.EXPO_PUBLIC_RORK_API_BASE_URL}/api` : 'http://localhost:3000/api';
+import { API_BASE_URL } from '@/lib/config';
 
 console.log('🔧 Auth Service Configuration:');
 console.log('🔧 EXPO_PUBLIC_RORK_API_BASE_URL:', process.env.EXPO_PUBLIC_RORK_API_BASE_URL);
@@ -123,7 +123,7 @@ class AuthService {
   }
 
   async login(email: string, password: string): Promise<AuthResponse> {
-    return this.makeRequest('/auth/login', {
+    return this.makeRequest('/auth/email/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
