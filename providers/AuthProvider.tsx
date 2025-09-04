@@ -2,6 +2,8 @@ import createContextHook from "@nkzw/create-context-hook";
 import { useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { authService, User } from "@/services/authService";
+import { router } from "expo-router";
+import { logger } from "@/lib/logger";
 
 interface AuthTokens {
   accessToken: string;
@@ -9,107 +11,129 @@ interface AuthTokens {
   expiresAt: number;
 }
 
-const demoUser: User = {
-  id: "demo-1",
-  username: "DemoStreamer",
-  phone: "+91 90000 00000",
-  email: "demo@demostreaming.app",
-  bio: "Vibes. Music. Gifts. Welcome to my live!",
-  profile_pic: "https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=800&q=80&auto=format&fit=crop",
-  followers: 13450,
-  following: 182,
-  total_likes: 203400,
-  coins_earned: 54230,
-  is_verified: true,
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-};
-
 export const [AuthProvider, useAuth] = createContextHook(() => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [tokens, setTokens] = useState<AuthTokens | null>(null);
 
   useEffect(() => {
+    logger.info('AUTH', 'AuthProvider mounted, loading user');
     loadUser();
   }, []);
 
   const loadUser = async () => {
     try {
+      logger.info('AUTH', 'Loading user from storage');
       const userData = await AsyncStorage.getItem("user");
       const tokenData = await AsyncStorage.getItem("auth_tokens");
+      
+      logger.debug('AUTH', 'Storage data retrieved', {
+        hasUserData: !!userData,
+        hasTokenData: !!tokenData,
+        userDataLength: userData?.length,
+        tokenDataLength: tokenData?.length
+      });
       
       if (userData && tokenData) {
         const parsedUser = JSON.parse(userData);
         const parsedTokens = JSON.parse(tokenData);
         
-        // Check if tokens are still valid
+        logger.debug('AUTH', 'Parsed auth data', {
+          userId: parsedUser.id,
+          username: parsedUser.username,
+          tokenExpiresAt: parsedTokens.expiresAt,
+          currentTime: Date.now(),
+          isExpired: Date.now() > parsedTokens.expiresAt
+        });
+        
+        // Only use tokens if they're still valid (no auto-refresh)
         if (Date.now() < parsedTokens.expiresAt) {
+          logger.info('AUTH', 'Tokens are valid, setting user');
           setUser(parsedUser);
           setTokens(parsedTokens);
         } else {
-          // Try to refresh tokens
-          try {
-            const refreshResponse = await authService.refreshToken(parsedTokens.refreshToken);
-            const newTokens = {
-              accessToken: refreshResponse.accessToken,
-              refreshToken: parsedTokens.refreshToken,
-              expiresAt: Date.now() + (refreshResponse.expiresIn * 1000)
-            };
-            
-            setUser(refreshResponse.user);
-            setTokens(newTokens);
-            await AsyncStorage.setItem("user", JSON.stringify(refreshResponse.user));
-            await AsyncStorage.setItem("auth_tokens", JSON.stringify(newTokens));
-          } catch (error) {
-            console.error("Failed to refresh tokens:", error);
-            await clearAuthData();
-          }
+          logger.warn('AUTH', 'Tokens expired, clearing auth data');
+          // Tokens expired, clear auth data and redirect to login
+          await clearAuthData();
+          router.replace("/auth");
         }
       } else {
-        // For demo purposes, set demo user
-        setUser(demoUser);
-        await AsyncStorage.setItem("user", JSON.stringify(demoUser));
+        logger.info('AUTH', 'No stored auth data found');
       }
     } catch (error) {
-      console.error("Failed to load user:", error);
-      setUser(demoUser);
+      logger.error('AUTH', 'Failed to load user', null, error);
     } finally {
       setIsLoading(false);
+      logger.info('AUTH', 'User loading completed', { isLoading: false });
     }
   };
 
   const clearAuthData = async () => {
-    await AsyncStorage.removeItem("user");
-    await AsyncStorage.removeItem("auth_tokens");
-    setUser(null);
-    setTokens(null);
+    logger.info('AUTH', 'Clearing auth data');
+    try {
+      await AsyncStorage.removeItem("user");
+      await AsyncStorage.removeItem("auth_tokens");
+      await AsyncStorage.removeItem("accessToken");
+      await AsyncStorage.removeItem("refreshToken");
+      setUser(null);
+      setTokens(null);
+      logger.info('AUTH', 'Auth data cleared successfully');
+    } catch (error) {
+      logger.error('AUTH', 'Error clearing auth data', null, error);
+    }
   };
 
   const saveAuthData = async (userData: User, authTokens: AuthTokens) => {
-    setUser(userData);
-    setTokens(authTokens);
-    await AsyncStorage.setItem("user", JSON.stringify(userData));
-    await AsyncStorage.setItem("auth_tokens", JSON.stringify(authTokens));
+    logger.info('AUTH', 'Saving auth data', {
+      userId: userData.id,
+      username: userData.username,
+      tokenExpiresAt: authTokens.expiresAt
+    });
+    
+    try {
+      setUser(userData);
+      setTokens(authTokens);
+      await AsyncStorage.setItem("user", JSON.stringify(userData));
+      await AsyncStorage.setItem("auth_tokens", JSON.stringify(authTokens));
+      logger.info('AUTH', 'Auth data saved successfully');
+    } catch (error) {
+      logger.error('AUTH', 'Error saving auth data', null, error);
+    }
   };
 
-  const updateUser = async (updates: Partial<User>) => {
-    if (!user) return;
 
-    const updatedUser: User = { ...user, ...updates } as User;
-    setUser(updatedUser);
-    await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
+
+  const updateUser = async (updates: Partial<User>) => {
+    if (!user) {
+      logger.warn('AUTH', 'Cannot update user - no user logged in');
+      return;
+    }
+
+    logger.info('AUTH', 'Updating user', { updates });
+    try {
+      const updatedUser: User = { ...user, ...updates } as User;
+      setUser(updatedUser);
+      await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
+      logger.info('AUTH', 'User updated successfully');
+    } catch (error) {
+      logger.error('AUTH', 'Error updating user', null, error);
+    }
   };
 
   const logout = async () => {
+    logger.info('AUTH', 'Logout initiated');
     try {
       if (tokens) {
+        logger.info('AUTH', 'Calling backend logout');
         await authService.logout();
       }
     } catch (error) {
-      console.error("Logout error:", error);
+      logger.error('AUTH', 'Logout error', null, error);
     } finally {
       await clearAuthData();
+      logger.info('AUTH', 'Navigating to auth screen');
+      // Force navigation to auth screen
+      router.replace("/auth");
     }
   };
 

@@ -20,7 +20,7 @@ const authenticateToken = async (req, res, next) => {
     // Get user from database
     const { data: user, error } = await supabaseAdmin
       .from('users')
-      .select('id, email, phone, username')
+      .select('*')
       .eq('id', decoded.userId)
       .single();
 
@@ -54,7 +54,7 @@ const optionalAuth = async (req, res, next) => {
     
     const { data: user, error } = await supabaseAdmin
       .from('users')
-      .select('id, email, phone, username')
+      .select('*')
       .eq('id', decoded.userId)
       .single();
 

@@ -1,0 +1,47 @@
+const fs = require('fs');
+const path = require('path');
+
+console.log('🔧 Cloudflare R2 Setup Guide');
+console.log('============================\n');
+
+console.log('To configure R2 for profile picture uploads, you need to:');
+console.log('');
+console.log('1. Create a Cloudflare R2 bucket:');
+console.log('   - Go to https://dash.cloudflare.com/');
+console.log('   - Navigate to R2 Object Storage');
+console.log('   - Create a new bucket');
+console.log('');
+console.log('2. Get your R2 credentials:');
+console.log('   - Go to R2 > Manage R2 API tokens');
+console.log('   - Create a new API token with read/write permissions');
+console.log('   - Note down: Account ID, Access Key ID, Secret Access Key');
+console.log('');
+console.log('3. Create a .env file in the backend directory with:');
+console.log('');
+console.log('R2_ENDPOINT=https://your-account-id.r2.cloudflarestorage.com');
+console.log('R2_BUCKET=your-bucket-name');
+console.log('R2_ACCESS_KEY=your_r2_access_key');
+console.log('R2_SECRET_KEY=your_r2_secret_key');
+console.log('R2_PUBLIC_URL=https://your-bucket-name.your-account-id.r2.cloudflarestorage.com');
+console.log('');
+console.log('4. Make sure your R2 bucket is publicly accessible:');
+console.log('   - Go to your bucket settings');
+console.log('   - Enable public access');
+console.log('   - Set up a custom domain if needed');
+console.log('');
+console.log('5. Test the configuration by uploading a profile picture');
+console.log('');
+console.log('Example .env file structure:');
+console.log('================================');
+console.log('R2_ENDPOINT=https://1234567890abcdef.r2.cloudflarestorage.com');
+console.log('R2_BUCKET=profile-pictures');
+console.log('R2_ACCESS_KEY=AKIAIOSFODNN7EXAMPLE');
+console.log('R2_SECRET_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY');
+console.log('R2_PUBLIC_URL=https://profile-pictures.1234567890abcdef.r2.cloudflarestorage.com');
+console.log('================================\n');
+
+console.log('Once configured, profile pictures will be uploaded to:');
+console.log('https://your-bucket-name.your-account-id.r2.cloudflarestorage.com/profile-pictures/username_userid.jpg');
+console.log('');
+console.log('The filename format will be: username_userid.jpg');
+console.log('Example: demo_c3688b4b-898e-4430-9b08-1137af4080e2.jpg');

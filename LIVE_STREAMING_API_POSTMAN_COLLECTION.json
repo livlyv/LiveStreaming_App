@@ -1,0 +1,1086 @@
+{
+  "info": {
+    "name": "Live Streaming App API",
+    "description": "Complete API collection for the live streaming application with authentication, user profiles, streaming, payments, and media management",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "streamId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "🔐 Authentication",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Check if the API server is running and healthy"
+          }
+        },
+        {
+          "name": "Root Endpoint",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": ["{{baseUrl}}"],
+              "path": [""]
+            },
+            "description": "Get API information and available endpoints"
+          }
+        },
+        {
+          "name": "Google OAuth Init",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/google/init?redirectTo={{baseUrl}}/auth/callback",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "google", "init"],
+              "query": [
+                {
+                  "key": "redirectTo",
+                  "value": "{{baseUrl}}/auth/callback"
+                }
+              ]
+            },
+            "description": "Initialize Google OAuth flow"
+          }
+        },
+        {
+          "name": "Google OAuth Exchange",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"your_authorization_code_here\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/google/exchange",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "google", "exchange"]
+            },
+            "description": "Exchange authorization code for tokens"
+          }
+        },
+        {
+          "name": "Request OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+1234567890\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/otp/request",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "otp", "request"]
+            },
+            "description": "Request OTP for phone number verification"
+          }
+        },
+        {
+          "name": "Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+1234567890\",\n  \"code\": \"123456\",\n  \"username\": \"newuser\",\n  \"bio\": \"Hello, I'm new here!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/otp/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "otp", "verify"]
+            },
+            "description": "Verify OTP and create/login user"
+          }
+        },
+        {
+          "name": "Email Signup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\",\n  \"username\": \"newuser\",\n  \"bio\": \"Hello, I'm new here!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/email/signup",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "email", "signup"]
+            },
+            "description": "Register new user with email and password"
+          }
+        },
+        {
+          "name": "Email Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/email/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "email", "login"]
+            },
+            "description": "Login with email and password"
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "refresh"]
+            },
+            "description": "Refresh access token using refresh token"
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "logout"]
+            },
+            "description": "Logout user and invalidate tokens"
+          }
+        }
+      ]
+    },
+    {
+      "name": "👤 User Management",
+      "item": [
+        {
+          "name": "Get Current User Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "profile"]
+            },
+            "description": "Get current authenticated user's profile"
+          }
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userId}}"]
+            },
+            "description": "Get user profile by user ID"
+          }
+        },
+        {
+          "name": "Update User Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"updatedusername\",\n  \"bio\": \"Updated bio text\",\n  \"profile_pic\": \"https://example.com/new-profile.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "profile"]
+            },
+            "description": "Update current user's profile information"
+          }
+        },
+        {
+          "name": "Search Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/search?q=username&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "username"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Search users by username"
+          }
+        },
+        {
+          "name": "Follow User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}/follow",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userId}}", "follow"]
+            },
+            "description": "Follow a user"
+          }
+        },
+        {
+          "name": "Unfollow User",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}/follow",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userId}}", "follow"]
+            },
+            "description": "Unfollow a user"
+          }
+        },
+        {
+          "name": "Get User Followers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}/followers?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userId}}", "followers"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get list of user's followers"
+          }
+        },
+        {
+          "name": "Get User Following",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}/following?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userId}}", "following"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get list of users that this user follows"
+          }
+        },
+        {
+          "name": "Check Can Message User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}/can-message",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userId}}", "can-message"]
+            },
+            "description": "Check if current user can message another user (99 coin threshold)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "📊 User Analytics",
+      "item": [
+        {
+          "name": "Get User Stream Duration (Weekly)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}/stream-duration?period=weekly",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userId}}", "stream-duration"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "weekly"
+                }
+              ]
+            },
+            "description": "Get user's streaming duration for the last 7 days"
+          }
+        },
+        {
+          "name": "Get User Stream Duration (Monthly)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}/stream-duration?period=monthly",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userId}}", "stream-duration"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "monthly"
+                }
+              ]
+            },
+            "description": "Get user's streaming duration for the last 4 weeks"
+          }
+        },
+        {
+          "name": "Get User Top Gifter",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}/top-gifter",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userId}}", "top-gifter"]
+            },
+            "description": "Get the user who has sent the most coins to this user"
+          }
+        },
+        {
+          "name": "Get User Top Gifts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}/top-gifts?limit=4",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userId}}", "top-gifts"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "4"
+                }
+              ]
+            },
+            "description": "Get top gifts received by user"
+          }
+        }
+      ]
+    },
+    {
+      "name": "📺 Streaming",
+      "item": [
+        {
+          "name": "Create Stream",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"My Live Stream\",\n  \"description\": \"Join me for an amazing live stream!\",\n  \"thumbnail_url\": \"https://example.com/thumbnail.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/streaming",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "streaming"]
+            },
+            "description": "Create a new stream"
+          }
+        },
+        {
+          "name": "Get Live Streams",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/streaming/live?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "streaming", "live"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get all currently live streams"
+          }
+        },
+        {
+          "name": "Get Stream by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/streaming/{{streamId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "streaming", "{{streamId}}"]
+            },
+            "description": "Get specific stream details"
+          }
+        },
+        {
+          "name": "Start Stream",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/streaming/{{streamId}}/start",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "streaming", "{{streamId}}", "start"]
+            },
+            "description": "Start a stream (make it live)"
+          }
+        },
+        {
+          "name": "End Stream",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/streaming/{{streamId}}/end",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "streaming", "{{streamId}}", "end"]
+            },
+            "description": "End a stream (make it offline)"
+          }
+        },
+        {
+          "name": "Update Viewer Count",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"count\": 150\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/streaming/{{streamId}}/viewers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "streaming", "{{streamId}}", "viewers"]
+            },
+            "description": "Update stream viewer count"
+          }
+        },
+        {
+          "name": "Get User Streams",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/streaming/user/{{userId}}?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "streaming", "user", "{{userId}}"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get all streams by a specific user"
+          }
+        },
+        {
+          "name": "Delete Stream",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/streaming/{{streamId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "streaming", "{{streamId}}"]
+            },
+            "description": "Delete a stream (only if not live)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "💰 Payments & Gifts",
+      "item": [
+        {
+          "name": "Get Available Gifts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/gifts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "gifts"]
+            },
+            "description": "Get list of available gifts and their coin values"
+          }
+        },
+        {
+          "name": "Purchase Coins",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 1000,\n  \"payment_method\": \"stripe\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/purchase-coins",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "purchase-coins"]
+            },
+            "description": "Purchase coins using payment method"
+          }
+        },
+        {
+          "name": "Send Gift",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stream_id\": \"{{streamId}}\",\n  \"gift_id\": \"gift-uuid-here\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/send-gift",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "send-gift"]
+            },
+            "description": "Send a gift during a stream"
+          }
+        },
+        {
+          "name": "Get User Transactions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/transactions?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "transactions"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get user's transaction history"
+          }
+        },
+        {
+          "name": "Get User Earnings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/earnings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "earnings"]
+            },
+            "description": "Get user's total earnings from gifts"
+          }
+        },
+        {
+          "name": "Request Withdrawal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 500,\n  \"withdrawal_method\": \"bank\",\n  \"account_details\": {\n    \"account_number\": \"1234567890\",\n    \"routing_number\": \"021000021\",\n    \"account_type\": \"checking\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/withdraw",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "withdraw"]
+            },
+            "description": "Request withdrawal of earned coins"
+          }
+        }
+      ]
+    },
+    {
+      "name": "📱 Notifications",
+      "item": [
+        {
+          "name": "Get Notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get user's notifications"
+          }
+        },
+        {
+          "name": "Mark Notification as Read",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/notification-id-here/read",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "notification-id-here", "read"]
+            },
+            "description": "Mark a specific notification as read"
+          }
+        },
+        {
+          "name": "Mark All Notifications as Read",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/read-all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "read-all"]
+            },
+            "description": "Mark all notifications as read"
+          }
+        },
+        {
+          "name": "Delete Notification",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/notification-id-here",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "notification-id-here"]
+            },
+            "description": "Delete a specific notification"
+          }
+        },
+        {
+          "name": "Get Unread Count",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/unread-count",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "unread-count"]
+            },
+            "description": "Get count of unread notifications"
+          }
+        }
+      ]
+    },
+    {
+      "name": "📁 Media Management",
+      "item": [
+        {
+          "name": "Generate Upload URL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fileName\": \"profile.jpg\",\n  \"fileType\": \"image/jpeg\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/media/upload-url",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "media", "upload-url"]
+            },
+            "description": "Generate presigned URL for file upload to Cloudflare R2"
+          }
+        },
+        {
+          "name": "Upload Profile Picture",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/media/profile-picture",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "media", "profile-picture"]
+            },
+            "description": "Upload profile picture (multipart form data)"
+          }
+        },
+        {
+          "name": "Get User Files",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/media/my-files?page=1&limit=20&type=image",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "media", "my-files"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "type",
+                  "value": "image"
+                }
+              ]
+            },
+            "description": "Get user's uploaded files"
+          }
+        },
+        {
+          "name": "Delete File",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/media/file-id-here",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "media", "file-id-here"]
+            },
+            "description": "Delete a file"
+          }
+        },
+        {
+          "name": "Get File by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/media/file-id-here",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "media", "file-id-here"]
+            },
+            "description": "Get file information by ID"
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-save tokens from authentication responses",
+          "if (pm.response.code === 200 || pm.response.code === 201) {",
+          "    const response = pm.response.json();",
+          "    ",
+          "    // Save access token",
+          "    if (response.accessToken) {",
+          "        pm.collectionVariables.set('accessToken', response.accessToken);",
+          "    }",
+          "    ",
+          "    // Save refresh token",
+          "    if (response.refreshToken) {",
+          "        pm.collectionVariables.set('refreshToken', response.refreshToken);",
+          "    }",
+          "    ",
+          "    // Save user ID",
+          "    if (response.user && response.user.id) {",
+          "        pm.collectionVariables.set('userId', response.user.id);",
+          "    }",
+          "    ",
+          "    // Save stream ID from stream creation",
+          "    if (response.stream && response.stream.id) {",
+          "        pm.collectionVariables.set('streamId', response.stream.id);",
+          "    }",
+          "}",
+          "",
+          "// Handle 401 errors by attempting token refresh",
+          "if (pm.response.code === 401) {",
+          "    console.log('Token expired, attempting refresh...');",
+          "    // You can implement automatic token refresh here",
+          "}"
+        ]
+      }
+    }
+  ]
+}

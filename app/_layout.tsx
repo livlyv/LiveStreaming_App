@@ -38,6 +38,8 @@ function RootLayoutNav() {
       <Stack.Screen name="chat/[chatId]" />
       <Stack.Screen name="settings" />
       <Stack.Screen name="notifications" />
+      <Stack.Screen name="earnings" />
+      <Stack.Screen name="purchase-coins" />
     </Stack>
   );
 }
