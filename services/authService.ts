@@ -17,7 +17,7 @@ export interface User {
   followers_count: number;
   following_count: number;
   total_likes: number;
-  coins_earned: number;
+  credits_earned: number;
   created_at: string;
   updated_at: string;
 }

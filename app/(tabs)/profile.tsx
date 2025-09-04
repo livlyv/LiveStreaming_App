@@ -42,6 +42,8 @@ import {
 } from "lucide-react-native";
 import { BarChart } from "react-native-chart-kit";
 import ProfileImageViewer from "@/components/ProfileImageViewer";
+import EarningsIcon from "@/components/EarningsIcon";
+import UserListModal from "@/components/UserListModal";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -64,6 +66,12 @@ export default function ProfileScreen() {
   const [profilePicTimestamp, setProfilePicTimestamp] = useState(Date.now());
   const [showFullScreenImage, setShowFullScreenImage] = useState(false);
   const [fullScreenImageUrl, setFullScreenImageUrl] = useState("");
+  const [showFollowersModal, setShowFollowersModal] = useState(false);
+  const [showFollowingModal, setShowFollowingModal] = useState(false);
+  const [followers, setFollowers] = useState<any[]>([]);
+  const [following, setFollowing] = useState<any[]>([]);
+  const [followersLoading, setFollowersLoading] = useState(false);
+  const [followingLoading, setFollowingLoading] = useState(false);
 
   useEffect(() => {
     loadProfileData();
@@ -95,7 +103,7 @@ export default function ProfileScreen() {
       
       logger.info('UI', 'Profile data loaded successfully', {
         username: profileResponse.user.username,
-        coinsEarned: earningsResponse.coins_earned,
+        creditsEarned: earningsResponse.credits_earned,
         totalGifts: earningsResponse.total_gifts
       });
     } catch (error) {
@@ -245,6 +253,44 @@ export default function ProfileScreen() {
     setFullScreenImageUrl("");
   };
 
+  const loadFollowers = async () => {
+    try {
+      setFollowersLoading(true);
+      const response = await apiClient.getFollowers(user?.id || '');
+      setFollowers(response.followers);
+      logger.info('UI', 'Followers loaded successfully', { count: response.followers.length });
+    } catch (error) {
+      logger.error('UI', 'Error loading followers', null, error);
+      Alert.alert('Error', 'Failed to load followers');
+    } finally {
+      setFollowersLoading(false);
+    }
+  };
+
+  const loadFollowing = async () => {
+    try {
+      setFollowingLoading(true);
+      const response = await apiClient.getFollowing(user?.id || '');
+      setFollowing(response.following);
+      logger.info('UI', 'Following loaded successfully', { count: response.following.length });
+    } catch (error) {
+      logger.error('UI', 'Error loading following', null, error);
+      Alert.alert('Error', 'Failed to load following');
+    } finally {
+      setFollowingLoading(false);
+    }
+  };
+
+  const handleFollowersPress = () => {
+    setShowFollowersModal(true);
+    loadFollowers();
+  };
+
+  const handleFollowingPress = () => {
+    setShowFollowingModal(true);
+    loadFollowing();
+  };
+
   const getKYCBadge = () => {
     if (!earnings?.kyc_status) return null;
     
@@ -275,8 +321,8 @@ export default function ProfileScreen() {
     }
   };
 
-  const progressPercentage = Math.min((earnings?.coins_earned || 0) / 5000 * 100, 100);
-  const remainingCoins = Math.max(5000 - (earnings?.coins_earned || 0), 0);
+  const progressPercentage = Math.min((earnings?.credits_earned || 0) / 5000 * 100, 100);
+  const remainingCredits = Math.max(5000 - (earnings?.credits_earned || 0), 0);
 
   if (loading) {
     return (
@@ -381,16 +427,16 @@ export default function ProfileScreen() {
 
           {/* Stats Section */}
           <View style={styles.statsSection}>
-            <View style={styles.statItem}>
+            <TouchableOpacity style={styles.statItem} onPress={handleFollowersPress}>
               <Users size={20} color="#E30CBD" />
-              <Text style={styles.statValue}>{profileData?.followers || 0}</Text>
+              <Text style={styles.statValue}>{profileData?.followers_count || 0}</Text>
               <Text style={styles.statLabel}>Followers</Text>
-            </View>
-            <View style={styles.statItem}>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.statItem} onPress={handleFollowingPress}>
               <Users size={20} color="#00E5FF" />
-              <Text style={styles.statValue}>{profileData?.following || 0}</Text>
+              <Text style={styles.statValue}>{profileData?.following_count || 0}</Text>
               <Text style={styles.statLabel}>Following</Text>
-            </View>
+            </TouchableOpacity>
             <View style={styles.statItem}>
               <Heart size={20} color="#FF6B6B" />
               <Text style={styles.statValue}>{profileData?.total_likes || 0}</Text>
@@ -416,21 +462,18 @@ export default function ProfileScreen() {
                 end={{ x: 1, y: 1 }}
               >
                                  <View style={styles.earningsHeader}>
-                   <RefreshCw 
+                   <EarningsIcon 
                      size={24} 
                      color="#FFFFFF" 
-                     style={[
-                       refreshing && { transform: [{ rotate: '360deg' }] }
-                     ]}
                    />
                    <Text style={styles.earningsTitle}>Total Earnings</Text>
                  </View>
                 
-                <Text style={styles.earningsAmount}>
-                  {earnings?.coins_earned?.toLocaleString() || 0} coins
-                </Text>
+                                 <Text style={styles.earningsAmount}>
+                   {earnings?.credits_earned?.toLocaleString() || 0} credits
+                 </Text>
                 <Text style={styles.earningsSubtitle}>
-                  {earnings?.can_withdraw ? "Ready to withdraw!" : `${remainingCoins} coins needed`}
+                  {earnings?.can_withdraw ? "Ready to withdraw!" : `${remainingCredits} credits needed`}
                 </Text>
                 
                                  {/* Progress Bar */}
@@ -454,14 +497,14 @@ export default function ProfileScreen() {
                    </View>
                  </View>
                 
-                <TouchableOpacity 
-                  style={[
-                    styles.withdrawButton,
-                    (!earnings?.can_withdraw || earnings?.coins_earned < 5000) && styles.disabledButton
-                  ]}
-                  onPress={() => router.push('/earnings')}
-                  disabled={!earnings?.can_withdraw || earnings?.coins_earned < 5000}
-                >
+                                 <TouchableOpacity 
+                   style={[
+                     styles.withdrawButton,
+                     (!earnings?.can_withdraw || earnings?.credits_earned < 5000) && styles.disabledButton
+                   ]}
+                   onPress={() => router.push('/earnings')}
+                                      disabled={!earnings?.can_withdraw || earnings?.credits_earned < 5000}
+                 >
                   <Wallet size={16} color="#FFFFFF" />
                   <Text style={styles.withdrawButtonText}>
                     {earnings?.can_withdraw ? "Withdraw Now" : "View Earnings"}
@@ -641,15 +684,33 @@ export default function ProfileScreen() {
          </View>
        </Modal>
 
-       {/* Full Screen Image Modal */}
-       <ProfileImageViewer
-         visible={showFullScreenImage}
-         imageUrl={fullScreenImageUrl}
-         onClose={closeFullScreenImage}
-       />
-     </View>
-   );
- }
+               {/* Full Screen Image Modal */}
+        <ProfileImageViewer
+          visible={showFullScreenImage}
+          imageUrl={fullScreenImageUrl}
+          onClose={closeFullScreenImage}
+        />
+
+        {/* Followers Modal */}
+        <UserListModal
+          visible={showFollowersModal}
+          onClose={() => setShowFollowersModal(false)}
+          title="Followers"
+          users={followers}
+          loading={followersLoading}
+        />
+
+        {/* Following Modal */}
+        <UserListModal
+          visible={showFollowingModal}
+          onClose={() => setShowFollowingModal(false)}
+          title="Following"
+          users={following}
+          loading={followingLoading}
+        />
+      </View>
+    );
+  }
 
 const styles = StyleSheet.create({
   container: {

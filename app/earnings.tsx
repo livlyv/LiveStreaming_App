@@ -81,7 +81,7 @@ export default function EarningsScreen() {
       setKycStatus(kycResponse);
       
       logger.info('UI', 'Earnings data loaded successfully', {
-        coinsEarned: earningsResponse.coins_earned,
+        creditsEarned: earningsResponse.credits_earned,
         canWithdraw: earningsResponse.can_withdraw,
         kycStatus: kycResponse.kyc_status
       });
@@ -131,12 +131,12 @@ export default function EarningsScreen() {
     const amount = parseInt(withdrawalForm.amount);
     
     if (!amount || amount < 5000) {
-      Alert.alert('Error', 'Minimum withdrawal amount is 5000 coins');
+      Alert.alert('Error', 'Minimum withdrawal amount is 5000 credits');
       return;
     }
 
-    if (amount > earnings.coins_earned) {
-      Alert.alert('Error', 'Insufficient coin balance');
+    if (amount > earnings.credits_earned) {
+      Alert.alert('Error', 'Insufficient credit balance');
       return;
     }
 
@@ -204,8 +204,8 @@ export default function EarningsScreen() {
     }
   };
 
-  const progressPercentage = Math.min((earnings?.coins_earned || 0) / 5000 * 100, 100);
-  const remainingCoins = Math.max(5000 - (earnings?.coins_earned || 0), 0);
+  const progressPercentage = Math.min((earnings?.credits_earned || 0) / 5000 * 100, 100);
+  const remainingCredits = Math.max(5000 - (earnings?.credits_earned || 0), 0);
 
   if (loading) {
     return (
@@ -270,8 +270,8 @@ export default function EarningsScreen() {
                  <Text style={styles.earningsTitle}>Total Earnings</Text>
                </View>
               
-              <Text style={styles.earningsAmount}>{earnings?.coins_earned?.toLocaleString() || 0}</Text>
-              <Text style={styles.earningsSubtitle}>coins earned</Text>
+                               <Text style={styles.earningsAmount}>{earnings?.credits_earned?.toLocaleString() || 0}</Text>
+                 <Text style={styles.earningsSubtitle}>credits earned</Text>
               
               {getKYCBadge()}
               
@@ -286,7 +286,7 @@ export default function EarningsScreen() {
                   />
                 </View>
                 <Text style={styles.progressText}>
-                  {progressPercentage >= 100 ? "Ready to withdraw!" : `${remainingCoins} coins needed`}
+                  {progressPercentage >= 100 ? "Ready to withdraw!" : `${remainingCredits} credits needed`}
                 </Text>
               </View>
             </LinearGradient>
@@ -300,8 +300,8 @@ export default function EarningsScreen() {
               <Text style={styles.statLabel}>Total Gifts</Text>
             </View>
             <View style={styles.statCard}>
-              <DollarSign size={24} color="#00E5FF" />
-              <Text style={styles.statValue}>₹{(earnings?.total_earnings || 0) / 100}</Text>
+              <Text style={styles.piggyBankIcon}>🏦</Text>
+              <Text style={styles.statValue}>₹{(earnings?.total_earnings || 0)}</Text>
               <Text style={styles.statLabel}>Total Value</Text>
             </View>
             <View style={styles.statCard}>
@@ -331,14 +331,14 @@ export default function EarningsScreen() {
                 style={[
                   styles.actionButton, 
                   styles.withdrawButton,
-                  (!earnings?.can_withdraw || earnings?.coins_earned < 5000) && styles.disabledButton
+                  (!earnings?.can_withdraw || earnings?.credits_earned < 5000) && styles.disabledButton
                 ]} 
                 onPress={() => setShowWithdrawalModal(true)}
-                disabled={!earnings?.can_withdraw || earnings?.coins_earned < 5000}
+                                   disabled={!earnings?.can_withdraw || earnings?.credits_earned < 5000}
               >
                 <Wallet size={20} color="#FFFFFF" />
                 <Text style={styles.actionButtonText}>
-                  {earnings?.can_withdraw ? "Withdraw Now" : "Minimum 5000 coins"}
+                  {earnings?.can_withdraw ? "Withdraw Now" : "Minimum 5000 credits"}
                 </Text>
               </TouchableOpacity>
             )}
@@ -349,9 +349,9 @@ export default function EarningsScreen() {
             <Text style={styles.sectionTitle}>Withdrawal Requirements</Text>
             <View style={styles.requirementsList}>
               <View style={styles.requirementItem}>
-                <CheckCircle size={20} color={earnings?.coins_earned >= 5000 ? "#00FF00" : "#666"} />
-                <Text style={[styles.requirementText, earnings?.coins_earned >= 5000 && styles.requirementMet]}>
-                  Earn at least 5000 coins
+                                 <CheckCircle size={20} color={earnings?.credits_earned >= 5000 ? "#00FF00" : "#666"} />
+                 <Text style={[styles.requirementText, earnings?.credits_earned >= 5000 && styles.requirementMet]}>
+                   Earn at least 5000 credits
                 </Text>
               </View>
               <View style={styles.requirementItem}>
@@ -458,11 +458,11 @@ export default function EarningsScreen() {
             
             <ScrollView style={styles.modalContent}>
               <Text style={styles.modalDescription}>
-                Withdraw your earnings to your bank account. Minimum withdrawal amount is 5000 coins.
+                Withdraw your earnings to your bank account. Minimum withdrawal amount is 5000 credits.
               </Text>
               
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Amount (coins)</Text>
+                                 <Text style={styles.formLabel}>Amount (credits)</Text>
                 <TextInput
                   style={styles.formInput}
                   placeholder="5000"
@@ -660,6 +660,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginTop: 8,
     marginBottom: 4,
+  },
+  piggyBankIcon: {
+    fontSize: 24,
+    marginBottom: 8,
   },
   statLabel: {
     color: '#999',

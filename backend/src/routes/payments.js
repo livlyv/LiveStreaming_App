@@ -12,15 +12,17 @@ router.get('/earnings', authenticateToken, asyncHandler(async (req, res) => {
   }
 
   try {
-    // Use the database function for real data
-    const { data: earnings, error: earningsError } = await supabaseAdmin
-      .rpc('get_gift_earnings', { user_uuid: req.user.id });
+    // Calculate total credits earned from stream_gifts table
+    const { data: gifts, error: giftsError } = await supabaseAdmin
+      .from('stream_gifts')
+      .select('credits_earned')
+      .eq('receiver_id', req.user.id);
 
-    if (earningsError) {
-      console.error('Error fetching gift earnings:', earningsError);
+    if (giftsError) {
+      console.error('Error fetching gift earnings:', giftsError);
       // Return mock data as fallback
       return res.json({
-        coins_earned: 1250,
+        credits_earned: 1250,
         total_earnings: 2500,
         total_gifts: 15,
         withdrawal_threshold: 5000,
@@ -30,13 +32,13 @@ router.get('/earnings', authenticateToken, asyncHandler(async (req, res) => {
       });
     }
 
-    const totalCoins = earnings && earnings.length > 0 ? earnings[0].total_coins : 0;
-    const totalGifts = earnings && earnings.length > 0 ? earnings[0].total_gifts : 0;
+    const totalCredits = gifts ? gifts.reduce((sum, gift) => sum + (gift.credits_earned || 0), 0) : 0;
+    const totalGifts = gifts ? gifts.length : 0;
 
     // Get user's KYC status
     const { data: user, error: userError } = await supabaseAdmin
       .from('users')
-      .select('kyc_status, first_withdrawal_completed, coins_earned')
+      .select('kyc_status, first_withdrawal_completed, credits_earned')
       .eq('id', req.user.id)
       .single();
 
@@ -44,18 +46,18 @@ router.get('/earnings', authenticateToken, asyncHandler(async (req, res) => {
       console.error('Error fetching user KYC status:', userError);
     }
 
-    // Update the user's coins_earned column with the calculated value from gifts
-    if (totalCoins !== user?.coins_earned) {
+    // Update the user's credits_earned column with the calculated value from gifts
+    if (totalCredits !== user?.credits_earned) {
       const { error: updateError } = await supabaseAdmin
         .from('users')
         .update({ 
-          coins_earned: totalCoins,
+          credits_earned: totalCredits,
           updated_at: new Date().toISOString()
         })
         .eq('id', req.user.id);
 
       if (updateError) {
-        console.error('Error updating user coins_earned:', updateError);
+        console.error('Error updating user credits_earned:', updateError);
       }
     }
 
@@ -63,15 +65,15 @@ router.get('/earnings', authenticateToken, asyncHandler(async (req, res) => {
     const firstWithdrawalCompleted = user?.first_withdrawal_completed || false;
     
     // Use the calculated value from gifts
-    const finalCoinsEarned = totalCoins;
+    const finalCreditsEarned = totalCredits;
     
-    // Determine if KYC is required
-    const kycRequired = finalCoinsEarned >= 5000 && !firstWithdrawalCompleted;
-    const canWithdraw = finalCoinsEarned >= 5000 && (kycStatus === 'verified' || firstWithdrawalCompleted);
+    // Determine if KYC is required (now based on credits instead of coins)
+    const kycRequired = finalCreditsEarned >= 5000 && !firstWithdrawalCompleted;
+    const canWithdraw = finalCreditsEarned >= 5000 && (kycStatus === 'verified' || firstWithdrawalCompleted);
 
     res.json({
-      coins_earned: finalCoinsEarned,
-      total_earnings: finalCoinsEarned * 2, // Assuming 2x conversion rate
+      credits_earned: finalCreditsEarned,
+      total_earnings: Math.floor(finalCreditsEarned * 0.55), // 55% of credits earned in rupees
       total_gifts: totalGifts,
       withdrawal_threshold: 5000,
       can_withdraw: canWithdraw,
@@ -186,19 +188,19 @@ router.post('/withdraw', authenticateToken, asyncHandler(async (req, res) => {
   }
 
   try {
-    // Get user's current balance and KYC status
+    // Get user's current balance and KYC status using new credits function
     const { data: earnings, error: earningsError } = await supabaseAdmin
-      .rpc('get_gift_earnings', { user_uuid: req.user.id });
+      .rpc('get_user_earnings_with_credits', { user_id: req.user.id });
 
     if (earningsError) {
       console.error('Error checking balance:', earningsError);
       return res.status(500).json({ error: 'Failed to check balance' });
     }
 
-    const totalCoins = earnings && earnings.length > 0 ? earnings[0].total_coins : 0;
+    const totalCredits = earnings && earnings.length > 0 ? earnings[0].credits_earned : 0;
 
-    if (totalCoins < amount) {
-      return res.status(400).json({ error: 'Insufficient coin balance' });
+    if (totalCredits < amount) {
+      return res.status(400).json({ error: 'Insufficient credit balance' });
     }
 
     // Get user's KYC status and withdrawal history
@@ -216,10 +218,10 @@ router.post('/withdraw', authenticateToken, asyncHandler(async (req, res) => {
     const kycStatus = user.kyc_status || 'pending';
     const firstWithdrawalCompleted = user.first_withdrawal_completed || false;
 
-    // Check KYC requirements
+    // Check KYC requirements (now based on credits instead of coins)
     if (amount >= 5000 && !firstWithdrawalCompleted && kycStatus !== 'verified') {
       return res.status(400).json({ 
-        error: 'KYC verification required for first withdrawal',
+        error: 'KYC verification required for first withdrawal of 5000+ credits',
         kyc_required: true,
         kyc_status: kycStatus
       });
@@ -460,7 +462,17 @@ router.post('/send-gift', authenticateToken, asyncHandler(async (req, res) => {
     // TODO: Implement proper coin balance management
     console.log('Gift sending allowed for user:', req.user.id, 'Gift cost:', gift.coins_cost);
 
-    // Create gift transaction
+    // Calculate credits earned by receiver (70% of coins sent)
+    const coinsSent = gift.coins_cost;
+    const creditsEarned = Math.floor(coinsSent * 0.7); // 70% conversion rate
+
+    console.log('Coins to Credits conversion:', { 
+      coinsSent, 
+      creditsEarned, 
+      conversionRate: '70%' 
+    });
+
+    // Create gift transaction with coins_amount (original coins sent) and credits_earned (70% conversion)
     const { data: giftTransaction, error: giftTransactionError } = await supabaseAdmin
       .from('stream_gifts')
       .insert({
@@ -468,7 +480,8 @@ router.post('/send-gift', authenticateToken, asyncHandler(async (req, res) => {
         sender_id: req.user.id,
         receiver_id: receiver_id,
         gift_id: gift_id,
-        coins_amount: gift.coins_cost,
+        coins_amount: coinsSent, // Store original coins sent
+        credits_earned: creditsEarned, // Store credits earned by receiver (70% conversion)
         message: message || null
       })
       .select()
@@ -479,14 +492,40 @@ router.post('/send-gift', authenticateToken, asyncHandler(async (req, res) => {
       return res.status(500).json({ error: 'Failed to send gift' });
     }
 
-    // Create transaction record
+    // Update receiver's credits_earned in users table
+    const { error: updateReceiverError } = await supabaseAdmin
+      .from('users')
+      .update({ 
+        credits_earned: supabaseAdmin.raw(`credits_earned + ${creditsEarned}`),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', receiver_id);
+
+    if (updateReceiverError) {
+      console.error('Error updating receiver credits:', updateReceiverError);
+      // Don't fail the transaction, just log the error
+    }
+
+    // Create transaction record for sender
     await supabaseAdmin
       .from('transactions')
       .insert({
         user_id: req.user.id,
         type: 'gift_sent',
-        amount: gift.coins_cost,
-        description: `Sent ${gift.name} gift`,
+        amount: coinsSent,
+        description: `Sent ${gift.name} gift (${coinsSent} coins → ${creditsEarned} credits)`,
+        status: 'completed',
+        reference_id: giftTransaction.id
+      });
+
+    // Create transaction record for receiver
+    await supabaseAdmin
+      .from('transactions')
+      .insert({
+        user_id: receiver_id,
+        type: 'gift_received',
+        amount: creditsEarned,
+        description: `Received ${gift.name} gift (${creditsEarned} credits earned)`,
         status: 'completed',
         reference_id: giftTransaction.id
       });
@@ -498,14 +537,15 @@ router.post('/send-gift', authenticateToken, asyncHandler(async (req, res) => {
         user_id: receiver_id,
         type: 'gift',
         title: 'New Gift Received!',
-        message: `${req.user.username} sent you a ${gift.name}`,
+        message: `${req.user.username} sent you a ${gift.name} (${creditsEarned} credits earned)`,
         data: {
           gift_id: gift.id,
           gift_name: gift.name,
           gift_icon: gift.icon,
           sender_id: req.user.id,
           sender_username: req.user.username,
-          stream_id: stream_id
+          stream_id: stream_id,
+          credits_earned: creditsEarned
         }
       });
 
@@ -516,6 +556,11 @@ router.post('/send-gift', authenticateToken, asyncHandler(async (req, res) => {
         name: gift.name,
         icon: gift.icon,
         coins_cost: gift.coins_cost
+      },
+      conversion: {
+        coins_sent: coinsSent,
+        credits_earned: creditsEarned,
+        conversion_rate: '70%'
       },
       transaction_id: giftTransaction.id
     });

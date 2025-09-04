@@ -3,7 +3,7 @@
 
 export const API_CONFIG = {
   // API Base URL - Update this when ngrok URL changes
-  BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 'https://100cdd636ddd.ngrok-free.app',
+  BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 'https://4664261d5bf7.ngrok-free.app',
   API_PATH: '/api',
   
   // Computed API Base URL

@@ -34,7 +34,7 @@ async function createUser(userData) {
       followers: 0,
       following: 0,
       total_likes: 0,
-      coins_earned: 0,
+      credits_earned: 0,
       is_verified: false
     };
 
@@ -215,7 +215,7 @@ router.post('/google/exchange', asyncHandler(async (req, res) => {
         followers: appUser.followers,
         following: appUser.following,
         total_likes: appUser.total_likes,
-        coins_earned: appUser.coins_earned,
+        credits_earned: appUser.credits_earned,
         created_at: appUser.created_at,
         updated_at: appUser.updated_at
       },
