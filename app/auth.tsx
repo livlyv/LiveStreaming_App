@@ -156,7 +156,7 @@ export default function AuthScreen() {
         followers_count: 0,
         following_count: 0,
         total_likes: 0,
-        coins_earned: 0,
+        credits_earned: 0,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };

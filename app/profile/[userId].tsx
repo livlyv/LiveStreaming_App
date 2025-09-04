@@ -372,8 +372,8 @@ export default function UserProfileScreen() {
             </View>
             <View style={styles.statItem}>
               <Gift size={20} color="#FFD700" />
-              <Text style={styles.statNumber}>{user.coins_earned || 0}</Text>
-              <Text style={styles.statLabel}>Coins</Text>
+                             <Text style={styles.statNumber}>{user.credits_earned || 0}</Text>
+               <Text style={styles.statLabel}>Credits</Text>
             </View>
           </View>
 
@@ -388,7 +388,7 @@ export default function UserProfileScreen() {
                   {topGifter ? `@${topGifter.sender_username}` : 'No gifts yet'}
                 </Text>
                 {topGifter && (
-                  <Text style={styles.highlightSubtext}>{topGifter.total_coins_sent} coins</Text>
+                  <Text style={styles.highlightSubtext}>{topGifter.total_coins_sent} credits</Text>
                 )}
               </View>
               <View style={[styles.highlightItem, { backgroundColor: 'rgba(255,215,0,0.12)' }]}>
@@ -398,7 +398,7 @@ export default function UserProfileScreen() {
                   {topGifts.length > 0 ? `${topGifts[0].gift_icon} ${topGifts[0].gift_name}` : 'No gifts yet'}
                 </Text>
                 {topGifts.length > 0 && (
-                  <Text style={styles.highlightSubtext}>{topGifts[0].total_coins} coins</Text>
+                  <Text style={styles.highlightSubtext}>{topGifts[0].total_coins} credits</Text>
                 )}
               </View>
             </View>
@@ -413,7 +413,7 @@ export default function UserProfileScreen() {
                   <View key={gift.gift_id} style={[styles.giftCard, { borderColor: ['#E30CBD', '#6900D1', '#FF006E', '#FFD700'][index] }]}>
                     <Text style={styles.giftIcon}>{gift.gift_icon}</Text>
                     <Text style={styles.giftName}>{gift.gift_name}</Text>
-                    <Text style={styles.giftValue}>{gift.total_coins} coins</Text>
+                    <Text style={styles.giftValue}>{gift.total_coins} credits</Text>
                   </View>
                 ))}
               </View>

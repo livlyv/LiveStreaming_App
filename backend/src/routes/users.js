@@ -442,8 +442,8 @@ router.get('/:userId/top-gifter', authenticateToken, asyncHandler(async (req, re
   
   try {
     const { data: topGifter, error } = await supabaseAdmin
-      .rpc('get_top_gifter', {
-        user_uuid: userId
+      .rpc('get_top_gifter_with_credits', {
+        receiver_id: userId
       });
     
     if (error) {
@@ -465,9 +465,9 @@ router.get('/:userId/top-gifts', authenticateToken, asyncHandler(async (req, res
   
   try {
     const { data: topGifts, error } = await supabaseAdmin
-      .rpc('get_top_gifts', {
-        user_uuid: userId,
-        gift_limit: Number(limit)
+      .rpc('get_top_gifts_with_credits', {
+        receiver_id: userId,
+        limit_count: Number(limit)
       });
     
     if (error) {
@@ -495,19 +495,17 @@ router.get('/:userId/can-message', authenticateToken, asyncHandler(async (req, r
   }
   
   try {
-    // Check if user has sent 99+ coins to this user
-    const { data: totalCoins, error } = await supabaseAdmin
-      .from('stream_gifts')
-      .select('gift_value, quantity')
-      .eq('receiver_id', userId)
-      .eq('sender_id', req.user.id);
+    // Check if user has sent 99+ credits to this user using the new function
+    const { data: canMessage, error } = await supabaseAdmin
+      .rpc('can_message_user_with_credits', {
+        sender_id: req.user.id,
+        receiver_id: userId
+      });
     
     if (error) {
+      console.error('Error checking message permission:', error);
       return res.status(500).json({ error: 'Failed to check message permission' });
     }
-    
-    const totalCoinsSent = totalCoins.reduce((sum, gift) => sum + (gift.gift_value * gift.quantity), 0);
-    const canMessage = totalCoinsSent >= 99;
     
     res.json({ can_message: canMessage });
   } catch (error) {
@@ -578,6 +576,120 @@ router.post('/upload-profile-picture', authenticateToken, asyncHandler(async (re
   // This endpoint is handled by the media routes
   // Redirect to media route
   res.status(400).json({ error: 'Use /api/media/profile-picture endpoint for profile picture upload' });
+}));
+
+// Get user followers
+router.get('/:userId/followers', authenticateToken, asyncHandler(async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'User not authenticated' });
+  }
+  
+  const { userId } = req.params;
+  const { page = 1, limit = 20 } = req.query;
+  const offset = (Number(page) - 1) * Number(limit);
+  
+  try {
+    // Get followers with user details
+    const { data: followers, error } = await supabaseAdmin
+      .from('follows')
+      .select(`
+        follower:users!follows_follower_id_fkey(
+          id,
+          username,
+          profile_pic,
+          bio,
+          followers_count,
+          following_count,
+          total_likes,
+          credits_earned,
+          is_verified,
+          created_at
+        )
+      `)
+      .eq('following_id', userId)
+      .range(offset, offset + Number(limit) - 1)
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching followers:', error);
+      return res.status(500).json({ error: 'Failed to fetch followers' });
+    }
+    
+    // Get total count
+    const { count: total } = await supabaseAdmin
+      .from('follows')
+      .select('*', { count: 'exact', head: true })
+      .eq('following_id', userId);
+    
+    const followersList = followers.map(f => f.follower);
+    
+    res.json({
+      followers: followersList,
+      page: Number(page),
+      limit: Number(limit),
+      total: total || 0
+    });
+  } catch (error) {
+    console.error('Error fetching followers:', error);
+    res.status(500).json({ error: 'Failed to fetch followers' });
+  }
+}));
+
+// Get user following
+router.get('/:userId/following', authenticateToken, asyncHandler(async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'User not authenticated' });
+  }
+  
+  const { userId } = req.params;
+  const { page = 1, limit = 20 } = req.query;
+  const offset = (Number(page) - 1) * Number(limit);
+  
+  try {
+    // Get following with user details
+    const { data: following, error } = await supabaseAdmin
+      .from('follows')
+      .select(`
+        following:users!follows_following_id_fkey(
+          id,
+          username,
+          profile_pic,
+          bio,
+          followers_count,
+          following_count,
+          total_likes,
+          credits_earned,
+          is_verified,
+          created_at
+        )
+      `)
+      .eq('follower_id', userId)
+      .range(offset, offset + Number(limit) - 1)
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching following:', error);
+      return res.status(500).json({ error: 'Failed to fetch following' });
+    }
+    
+    // Get total count
+    const { count: total } = await supabaseAdmin
+      .from('follows')
+      .select('*', { count: 'exact', head: true })
+      .eq('follower_id', userId);
+    
+    const followingList = following.map(f => f.following);
+    
+    res.json({
+      following: followingList,
+      page: Number(page),
+      limit: Number(limit),
+      total: total || 0
+    });
+  } catch (error) {
+    console.error('Error fetching following:', error);
+    res.status(500).json({ error: 'Failed to fetch following' });
+  }
 }));
 
 module.exports = router;

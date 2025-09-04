@@ -13,7 +13,7 @@ export interface User {
   followers_count: number;
   following_count: number;
   total_likes: number;
-  coins_earned: number;
+  credits_earned: number;
   is_verified: boolean;
   kyc_status: 'pending' | 'verified' | 'rejected';
   kyc_completed_at?: string;
@@ -135,7 +135,7 @@ export interface TopGift {
 }
 
 export interface EarningsData {
-  coins_earned: number;
+  credits_earned: number;
   total_earnings: number;
   total_gifts: number;
   withdrawal_threshold: number;
@@ -612,6 +612,25 @@ class ApiClient {
 
   async getSupportComplaint(complaintId: string): Promise<{ complaint: SupportComplaint }> {
     return this.request(`/users/support/complaints/${complaintId}`);
+  }
+
+  // Followers and Following Methods
+  async getFollowers(userId: string, page = 1, limit = 20): Promise<{ 
+    followers: User[]; 
+    page: number; 
+    limit: number; 
+    total: number 
+  }> {
+    return this.request(`/users/${userId}/followers?page=${page}&limit=${limit}`);
+  }
+
+  async getFollowing(userId: string, page = 1, limit = 20): Promise<{ 
+    following: User[]; 
+    page: number; 
+    limit: number; 
+    total: number 
+  }> {
+    return this.request(`/users/${userId}/following?page=${page}&limit=${limit}`);
   }
 }
 
