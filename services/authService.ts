@@ -6,16 +6,18 @@ console.log('🔧 Final API_BASE_URL:', API_BASE_URL);
 
 export interface User {
   id: string;
-  email?: string;
-  phone?: string;
+  email: string;
   username: string;
+  phone?: string;
   bio?: string;
   profile_pic?: string;
-  followers: number;
-  following: number;
+  is_verified: boolean;
+  kyc_status?: 'pending' | 'verified' | 'rejected';
+  kyc_document_url?: string;
+  followers_count: number;
+  following_count: number;
   total_likes: number;
   coins_earned: number;
-  is_verified: boolean;
   created_at: string;
   updated_at: string;
 }

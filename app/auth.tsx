@@ -16,7 +16,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { authService } from "@/services/authService";
 import { googleAuthService } from "@/services/googleAuth";
 import { Phone, Mail, Lock, User } from "lucide-react-native";
-import NetworkTest from "@/components/NetworkTest";
+
 
 export default function AuthScreen() {
   const { saveAuthData } = useAuth();
@@ -79,7 +79,7 @@ export default function AuthScreen() {
       };
       
       await saveAuthData(response.user, authTokens);
-      router.replace("/(tabs)");
+      router.replace("/(tabs)/home");
     } catch (error) {
       Alert.alert("Error", error instanceof Error ? error.message : "Authentication failed");
     } finally {
@@ -108,7 +108,7 @@ export default function AuthScreen() {
           expiresAt: Date.now() + (response.expiresIn * 1000)
         };
         await saveAuthData(response.user, authTokens);
-        router.replace("/(tabs)" as any);
+        router.replace("/(tabs)/home" as any);
       } else {
         const response = await authService.signup(email, password, username, bio);
         if (response.needsEmailVerification) {
@@ -126,56 +126,50 @@ export default function AuthScreen() {
     }
   };
 
-  const handleSocialLogin = async (provider: 'google' | 'facebook' | 'apple') => {
-    if (provider === 'google') {
-      setIsLoading(true);
-      try {
-        console.log('🔐 Starting Google OAuth from auth screen...');
-        
-        // Use the updated Google Auth service
-        const googleResponse = await googleAuthService.signIn();
-        console.log('✅ Google OAuth successful:', googleResponse.user.email);
-        
-        // Create auth tokens
-        const authTokens = {
-          accessToken: googleResponse.accessToken,
-          refreshToken: googleResponse.idToken, // Using idToken as refresh token
-          expiresAt: Date.now() + (3600 * 1000) // 1 hour
-        };
-        
-        // Save user data
-        const userData = {
-          id: googleResponse.user.id,
-          email: googleResponse.user.email,
-          username: googleResponse.user.name,
-          profile_pic: googleResponse.user.picture,
-          bio: `Hi, I'm ${googleResponse.user.name}!`,
-          is_verified: googleResponse.user.verified_email,
-          phone: undefined,
-          followers: 0,
-          following: 0,
-          total_likes: 0,
-          coins_earned: 0,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
-        
-        await saveAuthData(userData, authTokens);
-        console.log('✅ Auth data saved successfully');
-        
-        router.replace("/(tabs)" as any);
-      } catch (error) {
-        console.error('❌ Google OAuth error:', error);
-        Alert.alert("Error", error instanceof Error ? error.message : "Google login failed");
-      } finally {
-        setIsLoading(false);
-      }
-    } else {
-      Alert.alert(
-        `${provider} Login`,
-        `${provider} login will be implemented soon`,
-        [{ text: "OK" }]
-      );
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    try {
+      console.log('🔐 Starting Google OAuth from auth screen...');
+      
+      // Use the updated Google Auth service
+      const googleResponse = await googleAuthService.signIn();
+      console.log('✅ Google OAuth successful:', googleResponse.user.email);
+      
+      // Create auth tokens
+      const authTokens = {
+        accessToken: googleResponse.accessToken,
+        refreshToken: googleResponse.idToken, // Using idToken as refresh token
+        expiresAt: Date.now() + (3600 * 1000) // 1 hour
+      };
+      
+      // Save user data
+      const userData = {
+        id: googleResponse.user.id,
+        email: googleResponse.user.email,
+        username: googleResponse.user.name,
+        profile_pic: googleResponse.user.picture,
+        bio: `Hi, I'm ${googleResponse.user.name}!`,
+        is_verified: googleResponse.user.verified_email,
+        phone: undefined,
+        followers: 0,
+        following: 0,
+        followers_count: 0,
+        following_count: 0,
+        total_likes: 0,
+        coins_earned: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      await saveAuthData(userData, authTokens);
+      console.log('✅ Auth data saved successfully');
+      
+      router.replace("/(tabs)/home" as any);
+    } catch (error) {
+      console.error('❌ Google OAuth error:', error);
+      Alert.alert("Error", error instanceof Error ? error.message : "Google login failed");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -358,29 +352,11 @@ export default function AuthScreen() {
             <View style={styles.socialButtons}>
               <TouchableOpacity
                 style={styles.socialButton}
-                onPress={() => handleSocialLogin("google")}
+                onPress={handleGoogleLogin}
                 disabled={isLoading}
               >
                 <Text style={styles.socialButtonText}>G</Text>
               </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.socialButton}
-                onPress={() => handleSocialLogin("facebook")}
-                disabled={isLoading}
-              >
-                <Text style={styles.socialButtonText}>f</Text>
-              </TouchableOpacity>
-
-              {Platform.OS === "ios" && (
-                <TouchableOpacity
-                  style={styles.socialButton}
-                  onPress={() => handleSocialLogin("apple")}
-                  disabled={isLoading}
-                >
-                  <Text style={styles.socialButtonText}>🍎</Text>
-                </TouchableOpacity>
-              )}
             </View>
 
             <TouchableOpacity
@@ -407,7 +383,7 @@ export default function AuthScreen() {
               <Text style={styles.termsLink}>Privacy Policy</Text>
             </Text>
 
-            <NetworkTest />
+
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

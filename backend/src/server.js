@@ -4,7 +4,12 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
+
+// Import Supabase and helper functions
+const { supabaseAdmin } = require('./config/database');
+const { getOrCreateUserFromSupabase } = require('./routes/auth');
 
 // Import routes
 const authRoutes = require('./routes/auth');
